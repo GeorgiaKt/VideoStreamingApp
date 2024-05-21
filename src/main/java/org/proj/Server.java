@@ -1,5 +1,7 @@
 package org.proj;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
@@ -117,14 +119,13 @@ public class Server {
             System.out.println(file.getName() + file.getAbsolutePath());
         }
 
-
         try {
             createRemainingVideos();
+            storeAvailableFiles();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        //createAvailableFiles();
 
     }
 
@@ -132,7 +133,7 @@ public class Server {
 
         videosDir = new File(videosPath);
         files = videosDir.listFiles();
-        //print list of file in videos directory
+        //print list of files in videos directory
         if (files == null) {
             System.out.println("Folder not found !");
         } else if (files.length == 0)
@@ -143,12 +144,33 @@ public class Server {
         return new File[0];
     }
 
-    private void createAvailableFiles() {
-        files = videosDir.listFiles(); //refreshing list
+    private void storeAvailableFiles() throws IOException{
+        files = videosDir.listFiles(); //refresh list
+
+        //table structure: name (rowKey), format (columnKey), resolution (value)
+        Table<String, String, Integer> availableFiles = HashBasedTable.create();
+        FFprobe ffprobe = new FFprobe("C:\\ffmpeg-7.0-full_build\\bin\\ffprobe");
         for (File file : files) {
-            System.out.println(file.getName());
+            String filePath = file.getAbsolutePath();
+            String fileName = FilenameUtils.getBaseName(filePath);
+            String fileExtension = FilenameUtils.getExtension(filePath);
+
+            FFmpegProbeResult probeResult = ffprobe.probe(filePath);
+            FFmpegStream stream = probeResult.getStreams().get(0);
+
+            //store file to Table
+            availableFiles.put(fileName, fileExtension, stream.height);
         }
 
+//        //print all elements stored in the table
+//        for (Table.Cell<String, String, Integer> cell : availableFiles.cellSet()) {
+//            System.out.println("Name = " + cell.getRowKey() + ", Format = " + cell.getColumnKey() + ", Resolution = " + cell.getValue());
+//            //System.out.println(availableFiles.);
+//        }
+//        //print all elements per 'dimension'
+//        System.out.println(availableFiles.rowKeySet()); // values() for all resolutions-values, columnKeySet() for all formats-columnKey, rowKeySet() for all different names-rowKey
+//        //print all together
+//        System.out.println(availableFiles);
 
     }
 }
