@@ -12,15 +12,49 @@ import net.bramp.ffmpeg.probe.FFmpegStream;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 
 public class Server {
+
+    private ServerSocket serverSocket = null;
+    private Socket comSocket = null;
     //String videosPath = "C:\\Users\\geo\\OneDrive\\_Programming\\Java\\IntelliJ\\MultimediaApp\\src\\main\\resources\\videos";
-    String videosPath = "src/main/resources/videos";
-    File videosDir;
-    File[] files;
+    private String videosPath = "src/main/resources/videos";
+    private File videosDir;
+    private File[] files;
+
+    public Server(int port) {
+        establishSocketConnection(port);
+
+    }
+
+    private static void establishSocketConnection(int port) {
+        System.out.println("Server is running...");
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+            Socket comSocket = serverSocket.accept();
+
+            System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
+
+            PrintWriter out = new PrintWriter(comSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(comSocket.getInputStream()));
+
+//            String inputLine;
+//            while   ((inputLine = in.readLine()) != null)
+//            {
+//                if(inputLine.equals("\n"))
+//                    break;
+//                out.println(inputLine);
+//            }
+
+        } catch (IOException e) {
+            System.out.println("An exception occurred !");
+            System.out.println(e.getMessage());
+        }
+    }
 
     //method for setting matching target width for each height
     private static int getTargetWidth(int height) {
