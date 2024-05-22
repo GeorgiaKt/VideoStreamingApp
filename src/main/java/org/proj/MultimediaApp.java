@@ -13,7 +13,7 @@ public class MultimediaApp {
             serverTh.start();
 
 
-            if (!Server.isReady.get()) {
+            if (!Server.isReady.get()) { //if the server isn't running then wait
                 Thread.sleep(100);
             }
 

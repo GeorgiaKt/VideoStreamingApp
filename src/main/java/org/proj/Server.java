@@ -22,6 +22,8 @@ public class Server {
 
     public static AtomicBoolean isReady = new AtomicBoolean(false); //"flag" for whether the server has started
     Table<String, String, Integer> availableFiles;
+    PrintWriter out;
+    BufferedReader in;
     private ServerSocket serverSocket;
     private Socket comSocket;
     private int port;
@@ -33,7 +35,8 @@ public class Server {
 
     public Server(int port) {
         try {
-            serverSocket = new ServerSocket(port);
+            this.port = port;
+            serverSocket = new ServerSocket(this.port);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -56,7 +59,7 @@ public class Server {
         }
     }
 
-    private void establishSocketConnection(int port) {
+    private void establishSocketConnection() {
         isReady.set(true);
         System.out.println("Server is running...");
         try {
@@ -64,12 +67,10 @@ public class Server {
 
             System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
 
-            PrintWriter out = new PrintWriter(comSocket.getOutputStream(), true); //what server sends to client
-            BufferedReader in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what server receives from client
+            out = new PrintWriter(comSocket.getOutputStream(), true); //what server sends to client
+            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what server receives from client
 
-            String input = availableFiles.toString();
-            out.println("(Server wrote):" + input);
-            System.out.println("Server Received: " + in.readLine());
+            System.out.println("Connection established.");
 
         } catch (IOException e) {
             System.out.println("An exception occurred !");
@@ -165,8 +166,25 @@ public class Server {
             throw new RuntimeException(e);
         }
 
-        establishSocketConnection(port);
+        establishSocketConnection();
 
+        if(availableFiles == null)
+            System.out.println("Table is null");
+        if( availableFiles != null) {
+            sendMessageToClient(availableFiles.toString());
+        }
+
+    }
+
+    private void sendMessageToClient(String input) {
+        try {
+//            input = availableFiles.toString();
+            out.println("(Server wrote):" + input);
+            System.out.println("Server Received: " + in.readLine());
+        } catch (IOException e) {
+            System.out.println("An exception occurred !");
+            System.out.println(e.getMessage());
+        }
     }
 
 
@@ -189,19 +207,22 @@ public class Server {
         files = videosDir.listFiles(); //refresh list
 
         //table structure: name (rowKey), format (columnKey), resolution (value)
-        availableFiles = HashBasedTable.create();
-        FFprobe ffprobe = new FFprobe("C:\\ffmpeg-7.0-full_build\\bin\\ffprobe");
-        for (File file : files) {
-            String filePath = file.getAbsolutePath();
-            String fileName = FilenameUtils.getBaseName(filePath);
-            String fileExtension = FilenameUtils.getExtension(filePath);
+        if(files.length > 0){
+            availableFiles = HashBasedTable.create();
+            FFprobe ffprobe = new FFprobe("C:\\ffmpeg-7.0-full_build\\bin\\ffprobe");
+            for (File file : files) {
+                String filePath = file.getAbsolutePath();
+                String fileName = FilenameUtils.getBaseName(filePath);
+                String fileExtension = FilenameUtils.getExtension(filePath);
 
-            FFmpegProbeResult probeResult = ffprobe.probe(filePath);
-            FFmpegStream stream = probeResult.getStreams().get(0);
+                FFmpegProbeResult probeResult = ffprobe.probe(filePath);
+                FFmpegStream stream = probeResult.getStreams().get(0);
 
-            //store file to Table
-            availableFiles.put(fileName, fileExtension, stream.height);
-        }
+                //store file to Table
+                availableFiles.put(fileName, fileExtension, stream.height);
+            }
+        }else
+            System.out.println("No videos found in folder !");
 
 //        //print all elements stored in the table
 //        for (Table.Cell<String, String, Integer> cell : availableFiles.cellSet()) {

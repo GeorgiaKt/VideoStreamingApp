@@ -22,9 +22,11 @@ public class Client {
             stdIn = new BufferedReader(new InputStreamReader(System.in)); //what client receives from user
 
             String input;
-
-            System.out.println("Client Received " + in.readLine());
-            out.println("Client received back ");
+//            input = stdIn.readLine();
+//            System.out.println("User wrote: " + input);
+//
+//            System.out.println("Client Received " + in.readLine());
+//            out.println("Client received back ");
 
 
         } catch (IOException e) {
