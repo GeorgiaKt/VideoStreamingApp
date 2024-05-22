@@ -7,30 +7,43 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class Client {
+    Socket comSocket;
+    PrintWriter out;
+    BufferedReader in;
+    BufferedReader stdIn;
     private String host = "127.0.0.1";
     private int port = 8888;
 
-    public Client() {
-        establishSocketConnection();
-    }
-
     private void establishSocketConnection() {
         try {
-            Socket comSocket = new Socket(host, port);
-            PrintWriter out = new PrintWriter(comSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(comSocket.getInputStream()));
-            BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+            comSocket = new Socket(host, port);
+            out = new PrintWriter(comSocket.getOutputStream(), true); //what client sends to server
+            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what client receives from server
+            stdIn = new BufferedReader(new InputStreamReader(System.in)); //what client receives from user
 
-//            String inputLine;
-//            while ((inputLine = in.readLine()) != null) {
-//                if (inputLine.equals("bye"))
-//                    break;
-//                out.println(inputLine);
-//            }
+            String input;
+
+            System.out.println("Client Received " + in.readLine());
+            out.println("Client received back ");
+
 
         } catch (IOException e) {
             System.out.println("An exception has occurred on port " + port);
             System.out.println(e.getMessage());
         }
     }
+
+    public void mainMethod() {
+        establishSocketConnection();
+        try {
+            in.close();
+            out.close();
+            stdIn.close();
+            comSocket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
 }

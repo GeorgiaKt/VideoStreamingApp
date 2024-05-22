@@ -15,45 +15,29 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class Server {
 
-    private ServerSocket serverSocket = null;
-    private Socket comSocket = null;
+    public static AtomicBoolean isReady = new AtomicBoolean(false); //"flag" for whether the server has started
+    Table<String, String, Integer> availableFiles;
+    private ServerSocket serverSocket;
+    private Socket comSocket;
+    private int port;
     //String videosPath = "C:\\Users\\geo\\OneDrive\\_Programming\\Java\\IntelliJ\\MultimediaApp\\src\\main\\resources\\videos";
     private String videosPath = "src/main/resources/videos";
     private File videosDir;
     private File[] files;
 
+
     public Server(int port) {
-        establishSocketConnection(port);
-
-    }
-
-    private static void establishSocketConnection(int port) {
-        System.out.println("Server is running...");
         try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            Socket comSocket = serverSocket.accept();
-
-            System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
-
-            PrintWriter out = new PrintWriter(comSocket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(comSocket.getInputStream()));
-
-//            String inputLine;
-//            while   ((inputLine = in.readLine()) != null)
-//            {
-//                if(inputLine.equals("\n"))
-//                    break;
-//                out.println(inputLine);
-//            }
-
+            serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            System.out.println("An exception occurred !");
-            System.out.println(e.getMessage());
+            throw new RuntimeException(e);
         }
+
     }
 
     //method for setting matching target width for each height
@@ -69,6 +53,27 @@ public class Server {
                 return 640;
             default:
                 return 426;
+        }
+    }
+
+    private void establishSocketConnection(int port) {
+        isReady.set(true);
+        System.out.println("Server is running...");
+        try {
+            comSocket = serverSocket.accept();
+
+            System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
+
+            PrintWriter out = new PrintWriter(comSocket.getOutputStream(), true); //what server sends to client
+            BufferedReader in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what server receives from client
+
+            String input = availableFiles.toString();
+            out.println("(Server wrote):" + input);
+            System.out.println("Server Received: " + in.readLine());
+
+        } catch (IOException e) {
+            System.out.println("An exception occurred !");
+            System.out.println(e.getMessage());
         }
     }
 
@@ -160,8 +165,10 @@ public class Server {
             throw new RuntimeException(e);
         }
 
+        establishSocketConnection(port);
 
     }
+
 
     private File[] getListOfFiles() {
 
@@ -178,11 +185,11 @@ public class Server {
         return new File[0];
     }
 
-    private void storeAvailableFiles() throws IOException{
+    private void storeAvailableFiles() throws IOException {
         files = videosDir.listFiles(); //refresh list
 
         //table structure: name (rowKey), format (columnKey), resolution (value)
-        Table<String, String, Integer> availableFiles = HashBasedTable.create();
+        availableFiles = HashBasedTable.create();
         FFprobe ffprobe = new FFprobe("C:\\ffmpeg-7.0-full_build\\bin\\ffprobe");
         for (File file : files) {
             String filePath = file.getAbsolutePath();
