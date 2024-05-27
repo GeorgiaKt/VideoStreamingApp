@@ -1,16 +1,20 @@
-package org.client;
+package org.proj;
 
 import fr.bmartel.speedtest.SpeedTestReport;
 import fr.bmartel.speedtest.SpeedTestSocket;
 import fr.bmartel.speedtest.inter.ISpeedTestListener;
 import fr.bmartel.speedtest.model.SpeedTestError;
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 
-public class Client {
+public class Client extends Application {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
     private Socket comSocket;
     private PrintWriter out;
@@ -35,6 +39,8 @@ public class Client {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
+
+        launch(); //launch gui
 
         //storing arguments (download speed & format) in Object array
         Object[] arguments = new Object[2];
@@ -124,4 +130,12 @@ public class Client {
     }
 
 
+    @Override
+    public void start(Stage stage) throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 700, 500);
+        stage.setTitle("Client");
+        stage.setScene(scene);
+        stage.show();
+    }
 }

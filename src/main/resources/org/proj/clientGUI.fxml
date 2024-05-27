@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.proj.ClientController" prefHeight="400.0" prefWidth="600.0">
+    <children>
+        <BorderPane layoutX="120.0" layoutY="115.0" prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <top>
+                <MenuBar fx:id="MenuBar" BorderPane.alignment="CENTER">
+                    <menus>
+                        <Menu mnemonicParsing="false" text="File">
+                            <items>
+                                <MenuItem mnemonicParsing="false" text="Close" />
+                            </items>
+                        </Menu>
+                        <Menu mnemonicParsing="false" text="Edit">
+                            <items>
+                                <MenuItem mnemonicParsing="false" text="Delete" />
+                            </items>
+                        </Menu>
+                        <Menu mnemonicParsing="false" text="Help">
+                            <items>
+                                <MenuItem mnemonicParsing="false" text="About" />
+                            </items>
+                        </Menu>
+                    </menus>
+                </MenuBar>
+            </top>
+            <center>
+                <ListView prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+            </center>
+            <bottom>
+                <VBox fx:id="VBoxBottom" alignment="CENTER" prefHeight="119.0" prefWidth="600.0" spacing="20.0" BorderPane.alignment="CENTER">
+                    <opaqueInsets>
+                        <Insets />
+                    </opaqueInsets>
+                    <children>
+                        <Button fx:id="btnSelect" alignment="CENTER" mnemonicParsing="false" text="Select" textAlignment="CENTER" />
+                        <Label fx:id="label" text="Label" textAlignment="CENTER" />
+                    </children>
+                </VBox>
+            </bottom>
+            <right>
+                <VBox fx:id="VBoxRight" alignment="TOP_CENTER" prefHeight="256.0" prefWidth="183.0" spacing="20.0" BorderPane.alignment="CENTER">
+                    <children>
+                        <ComboBox fx:id="formatComboBox" prefWidth="150.0" promptText="format">
+                            <VBox.margin>
+                                <Insets />
+                            </VBox.margin>
+                        </ComboBox>
+                        <ComboBox fx:id="protocolComboBox" prefWidth="150.0" promptText="protocol" />
+                    </children>
+                    <padding>
+                        <Insets top="30.0" />
+                    </padding>
+                </VBox>
+            </right>
+        </BorderPane>
+    </children>
+
+</AnchorPane>
