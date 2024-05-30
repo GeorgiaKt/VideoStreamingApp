@@ -20,10 +20,10 @@ import java.net.SocketException;
 
 public class Server {
     private final String videosPath = "src/main/resources/videos";
-    private File videosDir;
-    private File[] files;
     FFprobe ffprobe;
     FFmpeg ffmpeg;
+    private File videosDir;
+    private File[] files;
     private Table<String, String, Integer> availableFiles;
     private int port;
     private PrintWriter out;
@@ -31,8 +31,6 @@ public class Server {
     private ObjectInputStream inputStream;
     private ServerSocket serverSocket;
     private Socket comSocket;
-
-
 
 
     public Server(int port) {
@@ -62,21 +60,56 @@ public class Server {
 
         server.establishSocketConnection();
 
+        int downloadSpeed;
+        String format, protocol;
 
-        //arguments = download speed & format that client sends to server
-        Object[] arguments = new Object[2];
-        try {
-            arguments = (Object[]) server.inputStream.readObject();
-        } catch (SocketException e) {
-            System.err.println("SocketException: Connection reset by peer");
-        } catch (IOException | ClassNotFoundException e) {
-            throw new RuntimeException(e);
+        while (true) {
+            if(server.comSocket == null || server.comSocket.isClosed()){
+                System.out.println("Client disconnected");
+                break;
+            }else {
+                //arguments = download speed & format that client sends to server
+                Object[] arguments = new Object[3];
+                try {
+                    arguments = (Object[]) server.inputStream.readObject(); //get download speed & format & protocol from client
+                    if (arguments[0] != null && arguments[1] != null && arguments[2] != null) {
+                        downloadSpeed = (int) arguments[0];
+                        format = (String) arguments[1];
+                        protocol = (String) arguments[2];
+
+                        System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed + " protocol: " + protocol);
+                    } else
+                        break;
+
+                } catch (SocketException e) {
+                    System.err.println("SocketException: Connection reset by peer");
+                } catch (IOException | ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
+
+//                System.out.println("error");
         }
-        int downloadSpeed = (int) arguments[0];
-        String format = (String) arguments[1];
 
-        System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
+        server.closeConnection();
 
+    }
+
+    private static int getTargetWidth(int height) {
+        //set matching target width for each height
+        switch (height) {
+            case 1080:
+                return 1920;
+            case 720:
+                return 1280;
+            case 480:
+                return 854;
+            case 360:
+                return 640;
+            default:
+                return 426;
+        }
     }
 
     private File[] getListOfFiles() {
@@ -118,7 +151,7 @@ public class Server {
             //initialize 'allowed' extensions & resolutions
             String[] extensions = {"mp4", "avi", "mkv"}; //3 extensions in total
             Integer[] resolutions = {1080, 720, 480, 360, 240}; // 5 resolutions in total
-            String targetFormat; //new's file extension
+            String targetFormat; //new file's extension
             for (String ext : extensions) {
                 //create remaining files based on the extension
                 if (ext.equals("mkv")) //mkv has different format
@@ -133,7 +166,7 @@ public class Server {
                 }
 
                 for (Integer res : resolutions) {
-                    //create remaining files based on the resolution - with resolution smaller than the original one
+                    //create remaining files based on the resolution - with resolution smaller than the original
                     if (stream.height > res) {
                         String targetFileName = fileName;
                         //in case there is already a file with the same file name (that includes resolution)
@@ -161,25 +194,9 @@ public class Server {
                 .setFormat(targetFormat)
                 .setVideoResolution(targetWidth, targetHeight)
                 .done();
-        //override is false in order not to create files that already exist
+        //override is false in order not to create files that already exist (based on the name of the file)
         FFmpegExecutor executor = new FFmpegExecutor(ffmpeg, ffprobe);
         executor.createJob(builder).run();
-    }
-
-    private static int getTargetWidth(int height) {
-        //set matching target width for each height
-        switch (height) {
-            case 1080:
-                return 1920;
-            case 720:
-                return 1280;
-            case 480:
-                return 854;
-            case 360:
-                return 640;
-            default:
-                return 426;
-        }
     }
 
     private void storeAvailableFiles() throws IOException {
@@ -235,5 +252,22 @@ public class Server {
         }
     }
 
+    private void closeConnection() {
+        try {
+            if (out != null)
+                out.close();
+            if (in != null)
+                in.close();
+            if (inputStream != null)
+                inputStream.close();
+            if (serverSocket != null && !serverSocket.isClosed())
+                serverSocket.close();
+            if (comSocket != null && comSocket.isClosed())
+                comSocket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 
 }

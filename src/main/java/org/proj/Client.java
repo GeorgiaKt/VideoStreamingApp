@@ -24,38 +24,52 @@ public class Client extends Application {
     private ObjectOutputStream outputStream;
     private String host = "127.0.0.1";
     private int port = 8888;
+
     private int downloadSpeed; //download speed
+    private String selectedFormat;
+    private String selectedProtocol;
 
     public static void main(String[] args) {
-        Client client = new Client();
-        client.establishSocketConnection();
+        launch(); //launch gui
 
-        client.downloadSpeedTest();
+    }
+
+    public String getSelectedFormat() {
+        return selectedFormat;
+    }
+
+    public void setSelectedFormat(String selectedFormat) {
+        this.selectedFormat = selectedFormat;
+    }
+
+    public int getDownloadSpeed() {
+        return downloadSpeed;
+    }
+
+    public void setDownloadSpeed(int downloadSpeed) {
+        this.downloadSpeed = downloadSpeed;
+    }
+
+    @Override
+    public void start(Stage stage) throws IOException {
+        establishSocketConnection();
+        downloadSpeedTest();
 
         //stop the execution of the main thread until the download speed test is completed
         try {
-            client.latch.await(); //wait for download speed test to complete
+            latch.await(); //wait for download speed test to complete
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
-        launch(); //launch gui
-
-        //storing arguments (download speed & format) in Object array
-        Object[] arguments = new Object[2];
-        arguments[0] = client.downloadSpeed;
-        arguments[1] = "mp4";
-
-        //send arguments array to server
-        try {
-            client.outputStream.writeObject(arguments);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        client.closeConnection();
-
+        FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 700, 500);
+        ClientController controller = fxmlLoader.getController();
+        controller.setClient(this);
+        stage.setTitle("Client");
+        stage.setScene(scene);
+        stage.show();
     }
 
     private void establishSocketConnection() {
@@ -120,22 +134,40 @@ public class Client extends Application {
     private void closeConnection() {
         System.out.println("Closing connection...");
         try {
-            in.close();
-            out.close();
-            stdIn.close();
-            comSocket.close();
+            if (out != null)
+                out.close();
+            if (in != null)
+                in.close();
+            if (stdIn != null)
+                stdIn.close();
+            if (stdOut != null)
+                stdOut.close();
+            if (outputStream != null)
+                outputStream.close();
+            if (comSocket != null && comSocket.isClosed())
+                comSocket.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
 
-    @Override
-    public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 700, 500);
-        stage.setTitle("Client");
-        stage.setScene(scene);
-        stage.show();
+    public void sendFormatAndSpeed(String format, String protocol) {
+        System.out.println("speed " + downloadSpeed + " format " + format + " protocol " + protocol);
+        selectedFormat = format;
+        selectedProtocol = protocol;
+        //storing arguments (download speed & format) in Object array
+        Object[] arguments = new Object[3];
+        arguments[0] = downloadSpeed;
+        arguments[1] = selectedFormat;
+        arguments[2] = selectedProtocol;
+
+        //send arguments array to server
+        try {
+            this.outputStream.writeObject(arguments);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
+
 }

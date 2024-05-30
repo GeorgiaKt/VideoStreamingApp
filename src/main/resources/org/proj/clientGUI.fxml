@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
 
-<AnchorPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.proj.ClientController" prefHeight="400.0" prefWidth="600.0">
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.proj.ClientController">
     <children>
         <BorderPane layoutX="120.0" layoutY="115.0" prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <top>
@@ -40,20 +45,20 @@
                         <Insets />
                     </opaqueInsets>
                     <children>
-                        <Button fx:id="btnSelect" alignment="CENTER" mnemonicParsing="false" text="Select" textAlignment="CENTER" />
-                        <Label fx:id="label" text="Label" textAlignment="CENTER" />
+                        <Button fx:id="btn" alignment="CENTER" mnemonicParsing="false" onAction="#btnSelect" text="Select" textAlignment="CENTER" />
+                        <Label fx:id="label" textAlignment="CENTER" />
                     </children>
                 </VBox>
             </bottom>
             <right>
                 <VBox fx:id="VBoxRight" alignment="TOP_CENTER" prefHeight="256.0" prefWidth="183.0" spacing="20.0" BorderPane.alignment="CENTER">
                     <children>
-                        <ComboBox fx:id="formatComboBox" prefWidth="150.0" promptText="format">
+                        <ComboBox fx:id="formatComboBox" onAction="#formatSelect" prefWidth="150.0" promptText="format">
                             <VBox.margin>
                                 <Insets />
                             </VBox.margin>
                         </ComboBox>
-                        <ComboBox fx:id="protocolComboBox" prefWidth="150.0" promptText="protocol" />
+                        <ComboBox fx:id="protocolComboBox" onAction="#protocolSelect" prefWidth="150.0" promptText="protocol" />
                     </children>
                     <padding>
                         <Insets top="30.0" />
