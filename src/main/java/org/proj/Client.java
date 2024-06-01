@@ -1,16 +1,21 @@
-package org.client;
+package org.proj;
 
 import fr.bmartel.speedtest.SpeedTestReport;
 import fr.bmartel.speedtest.SpeedTestSocket;
 import fr.bmartel.speedtest.inter.ISpeedTestListener;
 import fr.bmartel.speedtest.model.SpeedTestError;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 
-public class Client {
+public class Client extends Application {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
     private Socket comSocket;
     private PrintWriter out;
@@ -20,36 +25,59 @@ public class Client {
     private ObjectOutputStream outputStream;
     private String host = "127.0.0.1";
     private int port = 8888;
+
     private int downloadSpeed; //download speed
+    private String selectedFormat;
+    private String selectedProtocol;
 
     public static void main(String[] args) {
-        Client client = new Client();
-        client.establishSocketConnection();
+        launch(); //launch gui
 
-        client.downloadSpeedTest();
+    }
+
+    public String getSelectedFormat() {
+        return selectedFormat;
+    }
+
+    public void setSelectedFormat(String selectedFormat) {
+        this.selectedFormat = selectedFormat;
+    }
+
+    public int getDownloadSpeed() {
+        return downloadSpeed;
+    }
+
+    public void setDownloadSpeed(int downloadSpeed) {
+        this.downloadSpeed = downloadSpeed;
+    }
+
+    @Override
+    public void start(Stage stage) throws IOException {
+        establishSocketConnection();
+        downloadSpeedTest();
 
         //stop the execution of the main thread until the download speed test is completed
         try {
-            client.latch.await(); //wait for download speed test to complete
+            latch.await(); //wait for download speed test to complete
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
-        //storing arguments (download speed & format) in Object array
-        Object[] arguments = new Object[2];
-        arguments[0] = client.downloadSpeed;
-        arguments[1] = "mp4";
+        FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 700, 500);
+        ClientController controller = fxmlLoader.getController();
+        controller.setClient(this);
+        stage.setTitle("Client");
+        stage.setScene(scene);
 
-        //send arguments array to server
-        try {
-            client.outputStream.writeObject(arguments);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        //when window is closed, close connection with server
+        stage.setOnCloseRequest(event ->{
+            closeConnection();
+            Platform.exit();
+        });
 
-        client.closeConnection();
-
+        stage.show();
     }
 
     private void establishSocketConnection() {
@@ -114,14 +142,40 @@ public class Client {
     private void closeConnection() {
         System.out.println("Closing connection...");
         try {
-            in.close();
-            out.close();
-            stdIn.close();
-            comSocket.close();
+            if (out != null)
+                out.close();
+            if (in != null)
+                in.close();
+            if (stdIn != null)
+                stdIn.close();
+            if (stdOut != null)
+                stdOut.close();
+            if (outputStream != null)
+                outputStream.close();
+            if (comSocket != null && comSocket.isClosed())
+                comSocket.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+
+    public void sendFormatAndSpeed(String format, String protocol) {
+        System.out.println("speed " + downloadSpeed + " format " + format + " protocol " + protocol);
+        selectedFormat = format;
+        selectedProtocol = protocol;
+        //storing arguments (download speed & format) in Object array
+        Object[] arguments = new Object[3];
+        arguments[0] = downloadSpeed;
+        arguments[1] = selectedFormat;
+        arguments[2] = selectedProtocol;
+
+        //send arguments array to server
+        try {
+            this.outputStream.writeObject(arguments);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
