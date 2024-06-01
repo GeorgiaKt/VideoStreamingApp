@@ -72,10 +72,10 @@ public class Client extends Application {
         stage.setScene(scene);
 
         //when window is closed, close connection with server
-        stage.setOnCloseRequest(event ->{
-            closeConnection();
-            Platform.exit();
-        });
+//        stage.setOnCloseRequest(event ->{
+//            closeConnection();
+//            Platform.exit();
+//        });
 
         stage.show();
     }
@@ -142,6 +142,8 @@ public class Client extends Application {
     private void closeConnection() {
         System.out.println("Closing connection...");
         try {
+            if (comSocket != null && comSocket.isClosed())
+                comSocket.close();
             if (out != null)
                 out.close();
             if (in != null)
@@ -152,8 +154,7 @@ public class Client extends Application {
                 stdOut.close();
             if (outputStream != null)
                 outputStream.close();
-            if (comSocket != null && comSocket.isClosed())
-                comSocket.close();
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

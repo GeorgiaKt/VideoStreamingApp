@@ -66,7 +66,7 @@ public class Server {
         }
 
 
-        while (true) { //server is always running
+        while (true) { //server is always running - waiting for client to connect
             server.establishSocketConnection(); //connection server-client
 
             int downloadSpeed;
@@ -74,42 +74,43 @@ public class Server {
 
             while (true) { //read from stream till client disconnects
                 if (server.comSocket == null || server.comSocket.isClosed()) {
-                    System.out.println("Client disconnected");
+                    System.out.println("Client disconnected - ");
                     break;
                 } else {
                     try {
-                        if (server.inputStream.available() > 0) { //check if there is anything available to read from the stream
-                            //arguments = download speed & format that client sends to server
-                            Object[] arguments = new Object[3];
-                            arguments = (Object[]) server.inputStream.readObject(); //read from client
-                            if (arguments[0] != null && arguments[1] != null && arguments[2] != null) {
-                                downloadSpeed = (int) arguments[0];
-                                format = (String) arguments[1];
-                                protocol = (String) arguments[2];
+                        //arguments = download speed & format that client sends to server
+                        Object[] arguments = new Object[3];
+                        arguments = (Object[]) server.inputStream.readObject(); //read from client
+                        if (arguments[0] != null && arguments[1] != null && arguments[2] != null) {
+                            downloadSpeed = (int) arguments[0];
+                            format = (String) arguments[1];
+                            protocol = (String) arguments[2];
 
-                                System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed + " protocol: " + protocol);
-                            } else {
-                                System.out.println("Null arguments");
-                                break;
-                            }
+                            System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed + " protocol: " + protocol);
+                        } else {
+                            System.out.println("Null arguments");
+                            break;
                         }
 
                     } catch (SocketException e) {
-                        System.err.println("SocketException: Connection reset by peer");
+                        //client disconnected
+                        System.out.println("Client disconnected");
+                        break;
+                    } catch (EOFException e) {
+                        //stream closed (EOF reached)
+                        System.out.println("Stream closed by client");
                         break;
                     } catch (IOException | ClassNotFoundException e) {
-//                        throw new RuntimeException(e);
-                        System.err.println("IOException | ClassNotFoundException");
+                        System.out.println("Error reading from client: " + e.getMessage());
+                        e.printStackTrace();
                         break;
                     }
 
                 }
 
             }
-
-            server.closeConnection();
+            server.closeClientConnection();
         }
-
 
     }
 
@@ -267,7 +268,7 @@ public class Server {
         }
     }
 
-    private void closeConnection() {
+    private void closeClientConnection() {
         try {
             if (out != null)
                 out.close();
