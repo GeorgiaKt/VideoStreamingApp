@@ -5,6 +5,7 @@ import fr.bmartel.speedtest.SpeedTestSocket;
 import fr.bmartel.speedtest.inter.ISpeedTestListener;
 import fr.bmartel.speedtest.model.SpeedTestError;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -69,6 +70,13 @@ public class Client extends Application {
         controller.setClient(this);
         stage.setTitle("Client");
         stage.setScene(scene);
+
+        //when window is closed, close connection with server
+        stage.setOnCloseRequest(event ->{
+            closeConnection();
+            Platform.exit();
+        });
+
         stage.show();
     }
 

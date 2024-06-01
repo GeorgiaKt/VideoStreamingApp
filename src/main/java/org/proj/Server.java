@@ -58,41 +58,58 @@ public class Server {
             throw new RuntimeException(e);
         }
 
-        server.establishSocketConnection();
+        try {
+            server.serverSocket = new ServerSocket(server.port); //create socket
+            System.out.println("Server is running...");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        int downloadSpeed;
-        String format, protocol;
 
-        while (true) {
-            if(server.comSocket == null || server.comSocket.isClosed()){
-                System.out.println("Client disconnected");
-                break;
-            }else {
-                //arguments = download speed & format that client sends to server
-                Object[] arguments = new Object[3];
-                try {
-                    arguments = (Object[]) server.inputStream.readObject(); //get download speed & format & protocol from client
-                    if (arguments[0] != null && arguments[1] != null && arguments[2] != null) {
-                        downloadSpeed = (int) arguments[0];
-                        format = (String) arguments[1];
-                        protocol = (String) arguments[2];
+        while (true) { //server is always running
+            server.establishSocketConnection(); //connection server-client
 
-                        System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed + " protocol: " + protocol);
-                    } else
+            int downloadSpeed;
+            String format, protocol;
+
+            while (true) { //read from stream till client disconnects
+                if (server.comSocket == null || server.comSocket.isClosed()) {
+                    System.out.println("Client disconnected");
+                    break;
+                } else {
+                    try {
+                        if (server.inputStream.available() > 0) { //check if there is anything available to read from the stream
+                            //arguments = download speed & format that client sends to server
+                            Object[] arguments = new Object[3];
+                            arguments = (Object[]) server.inputStream.readObject(); //read from client
+                            if (arguments[0] != null && arguments[1] != null && arguments[2] != null) {
+                                downloadSpeed = (int) arguments[0];
+                                format = (String) arguments[1];
+                                protocol = (String) arguments[2];
+
+                                System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed + " protocol: " + protocol);
+                            } else {
+                                System.out.println("Null arguments");
+                                break;
+                            }
+                        }
+
+                    } catch (SocketException e) {
+                        System.err.println("SocketException: Connection reset by peer");
                         break;
+                    } catch (IOException | ClassNotFoundException e) {
+//                        throw new RuntimeException(e);
+                        System.err.println("IOException | ClassNotFoundException");
+                        break;
+                    }
 
-                } catch (SocketException e) {
-                    System.err.println("SocketException: Connection reset by peer");
-                } catch (IOException | ClassNotFoundException e) {
-                    throw new RuntimeException(e);
                 }
 
             }
 
-//                System.out.println("error");
+            server.closeConnection();
         }
 
-        server.closeConnection();
 
     }
 
@@ -234,8 +251,6 @@ public class Server {
 
     private void establishSocketConnection() {
         try {
-            serverSocket = new ServerSocket(port); //create socket
-            System.out.println("Server is running...");
             comSocket = serverSocket.accept(); //accept client & create socket for the communication
             System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
 
@@ -260,8 +275,6 @@ public class Server {
                 in.close();
             if (inputStream != null)
                 inputStream.close();
-            if (serverSocket != null && !serverSocket.isClosed())
-                serverSocket.close();
             if (comSocket != null && comSocket.isClosed())
                 comSocket.close();
         } catch (IOException e) {
