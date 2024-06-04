@@ -13,16 +13,19 @@ import javafx.stage.Stage;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 
 public class Client extends Application {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
     private Socket comSocket;
-    private PrintWriter out;
-    private BufferedReader in;
-    private BufferedReader stdIn;
-    private BufferedWriter stdOut;
+//    private PrintWriter out;
+//    private BufferedReader in;
+//    private BufferedReader stdIn;
+//    private BufferedWriter stdOut;
     private ObjectOutputStream outputStream;
+    private ObjectInputStream inputStream;
     private String host = "127.0.0.1";
     private int port = 8888;
 
@@ -83,12 +86,13 @@ public class Client extends Application {
     private void establishSocketConnection() {
         try {
             comSocket = new Socket(host, port); //create socket for the communication between client and a specific host in a specific port
-            out = new PrintWriter(comSocket.getOutputStream(), true); //what client sends to server
-            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what client receives from server
-            stdIn = new BufferedReader(new InputStreamReader(System.in)); //what client sends to user
-            stdOut = new BufferedWriter(new OutputStreamWriter(System.out)); //what client receives from user
+//            out = new PrintWriter(comSocket.getOutputStream(), true); //what client sends to server
+//            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what client receives from server
+//            stdIn = new BufferedReader(new InputStreamReader(System.in)); //what client sends to user
+//            stdOut = new BufferedWriter(new OutputStreamWriter(System.out)); //what client receives from user
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //objects client sends to server
+            inputStream = new ObjectInputStream(comSocket.getInputStream());
 
             System.out.println("Client connected");
 
@@ -144,16 +148,18 @@ public class Client extends Application {
         try {
             if (comSocket != null && comSocket.isClosed())
                 comSocket.close();
-            if (out != null)
-                out.close();
-            if (in != null)
-                in.close();
-            if (stdIn != null)
-                stdIn.close();
-            if (stdOut != null)
-                stdOut.close();
+//            if (out != null)
+//                out.close();
+//            if (in != null)
+//                in.close();
+//            if (stdIn != null)
+//                stdIn.close();
+//            if (stdOut != null)
+//                stdOut.close();
             if (outputStream != null)
                 outputStream.close();
+            if (inputStream != null)
+                inputStream.close();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -161,22 +167,51 @@ public class Client extends Application {
     }
 
 
-    public void sendFormatAndSpeed(String format, String protocol) {
-        System.out.println("speed " + downloadSpeed + " format " + format + " protocol " + protocol);
+    public void sendFormatAndSpeed(String format) {
+        System.out.println("speed " + downloadSpeed + " format " + format);
         selectedFormat = format;
-        selectedProtocol = protocol;
         //storing arguments (download speed & format) in Object array
-        Object[] arguments = new Object[3];
-        arguments[0] = downloadSpeed;
-        arguments[1] = selectedFormat;
-        arguments[2] = selectedProtocol;
+        Object[] speedFormat = new Object[2];
+        speedFormat[0] = selectedFormat;
+        speedFormat[1] = downloadSpeed;
 
-        //send arguments array to server
+        //send speedFormat array to server
         try {
-            this.outputStream.writeObject(arguments);
+            outputStream.writeObject(speedFormat);
+            outputStream.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public ArrayList<String> receiveSuitableVideos() {
+        System.out.println("=============");
+        ArrayList<String> videos;
+        Object sVideos;
+        try {
+            sVideos = inputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        videos = (ArrayList<String>) sVideos;
+        System.out.println("RECEIVED: " + videos);
+        return videos;
+
+    }
+
+    public void sendSelectedVideoAndProtocol(String selectedVideo, String protocol){
+        System.out.println("selected video: " + selectedVideo + " protocol: " + protocol);
+        Object[] videoProtocol = new Object[2];
+        videoProtocol[0] = selectedVideo;
+        videoProtocol[1] = protocol;
+        try {
+            outputStream.writeObject(videoProtocol);
+            outputStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
 }

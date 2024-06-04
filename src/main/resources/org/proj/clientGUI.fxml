@@ -37,7 +37,7 @@
                 </MenuBar>
             </top>
             <center>
-                <ListView prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+                <ListView fx:id="listView" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
             </center>
             <bottom>
                 <VBox fx:id="VBoxBottom" alignment="CENTER" prefHeight="119.0" prefWidth="600.0" spacing="20.0" BorderPane.alignment="CENTER">
@@ -45,7 +45,7 @@
                         <Insets />
                     </opaqueInsets>
                     <children>
-                        <Button fx:id="btn" alignment="CENTER" mnemonicParsing="false" onAction="#btnSelect" text="Select" textAlignment="CENTER" />
+                        <Button fx:id="btn" alignment="CENTER" mnemonicParsing="false" onAction="#btnSelect" text="Load Videos" textAlignment="CENTER" />
                         <Label fx:id="label" textAlignment="CENTER" />
                     </children>
                 </VBox>

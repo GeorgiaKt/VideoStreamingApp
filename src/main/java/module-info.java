@@ -6,6 +6,7 @@ module MultimediaApp {
     requires com.google.common;
     requires org.apache.commons.io;
     requires org.apache.commons.lang3;
+    requires javafx.graphics;
 
 
     opens org.proj to javafx.fxml;
