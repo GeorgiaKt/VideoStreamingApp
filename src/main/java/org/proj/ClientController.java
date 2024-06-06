@@ -43,6 +43,7 @@ public class ClientController implements Initializable {
     private String selectedVideo;
     private String formatSelected;
     private String protocolSelected;
+    private int resolution = 0;
 
     public void setClient(Client client) {
         this.client = client;
@@ -62,19 +63,22 @@ public class ClientController implements Initializable {
             public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
                 selectedVideo = listView.getSelectionModel().getSelectedItem();
 //                selectedVideo = t1;
-                System.out.println("2");
                 if (selectedVideo != null) {
                     label.setText("Selected video: " + selectedVideo);
                     client.sendSelectedVideoAndProtocol(selectedVideo, protocolSelected);
-                }
 
+                    if(protocolSelected == null){
+                        resolution = client.receiveVideoResolution();
+                    }
+
+                    client.playVideo(protocolSelected, resolution);
+                }
             }
         });
     }
 
     public void formatSelect(ActionEvent actionEvent) {
         formatSelected = formatComboBox.getSelectionModel().getSelectedItem();
-
     }
 
     public void protocolSelect(ActionEvent actionEvent) {
@@ -82,14 +86,13 @@ public class ClientController implements Initializable {
             protocolSelected = "";
         else
             protocolSelected = protocolComboBox.getSelectionModel().getSelectedItem();
-
     }
 
 
     public void btnSelect(ActionEvent actionEvent) {
         //format is required to proceed
         if (formatComboBox.getSelectionModel().getSelectedItem() == null) //if user doesnt select format
-            label.setText("You need to select format !");
+            label.setText("Format is required !");
         else {
 
             System.out.println("Format Selected: " + formatSelected);
@@ -101,9 +104,7 @@ public class ClientController implements Initializable {
 
             loadListView();
             label.setText("Select video to play");
-
         }
-
     }
 
     private void loadListView() {

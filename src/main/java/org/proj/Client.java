@@ -20,18 +20,13 @@ import java.util.concurrent.CountDownLatch;
 public class Client extends Application {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
     private Socket comSocket;
-//    private PrintWriter out;
-//    private BufferedReader in;
-//    private BufferedReader stdIn;
-//    private BufferedWriter stdOut;
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
     private String host = "127.0.0.1";
     private int port = 8888;
-
     private int downloadSpeed; //download speed
     private String selectedFormat;
-    private String selectedProtocol;
+    private String ffplayPath = "C:/ffmpeg-7.0-full_build/bin/ffplay.exe";
 
     public static void main(String[] args) {
         launch(); //launch gui
@@ -86,10 +81,6 @@ public class Client extends Application {
     private void establishSocketConnection() {
         try {
             comSocket = new Socket(host, port); //create socket for the communication between client and a specific host in a specific port
-//            out = new PrintWriter(comSocket.getOutputStream(), true); //what client sends to server
-//            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what client receives from server
-//            stdIn = new BufferedReader(new InputStreamReader(System.in)); //what client sends to user
-//            stdOut = new BufferedWriter(new OutputStreamWriter(System.out)); //what client receives from user
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //objects client sends to server
             inputStream = new ObjectInputStream(comSocket.getInputStream());
@@ -128,8 +119,8 @@ public class Client extends Application {
 
             @Override
             public void onProgress(final float percent, final SpeedTestReport downloadReport) {
-                System.out.println("Percent: " + percent + " DownloadReport: " + downloadReport);
-                System.out.println("on progress...");
+//                System.out.println("Percent: " + percent + " DownloadReport: " + downloadReport);
+//                System.out.println("on progress...");
 
             }
         });
@@ -148,14 +139,6 @@ public class Client extends Application {
         try {
             if (comSocket != null && comSocket.isClosed())
                 comSocket.close();
-//            if (out != null)
-//                out.close();
-//            if (in != null)
-//                in.close();
-//            if (stdIn != null)
-//                stdIn.close();
-//            if (stdOut != null)
-//                stdOut.close();
             if (outputStream != null)
                 outputStream.close();
             if (inputStream != null)
@@ -185,7 +168,6 @@ public class Client extends Application {
     }
 
     public ArrayList<String> receiveSuitableVideos() {
-        System.out.println("=============");
         ArrayList<String> videos;
         Object sVideos;
         try {
@@ -200,7 +182,7 @@ public class Client extends Application {
 
     }
 
-    public void sendSelectedVideoAndProtocol(String selectedVideo, String protocol){
+    public void sendSelectedVideoAndProtocol(String selectedVideo, String protocol) {
         System.out.println("selected video: " + selectedVideo + " protocol: " + protocol);
         Object[] videoProtocol = new Object[2];
         videoProtocol[0] = selectedVideo;
@@ -212,6 +194,64 @@ public class Client extends Application {
             throw new RuntimeException(e);
         }
 
+    }
+
+    public int receiveVideoResolution() {
+        Object res;
+        try {
+            res = inputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("RECEIVED: " + res);
+        return (int) res;
+    }
+
+    public void playVideo(String protocol, int resolution) {
+        if (protocol == null) { //if client hasn't selected protocol
+            if (resolution == 240) {
+                protocol = "TCP";
+            } else if (resolution == 360 || resolution == 480) {
+                protocol = "UDP";
+            } else if (resolution == 720 || resolution == 1080) {
+                protocol = "RTP/UDP";
+            }
+        }
+
+        String[] command;
+
+        if (protocol != null) {
+            if (protocol.equals("TCP")) {
+                command = new String[]{
+                        ffplayPath,
+                        "tcp://" + host + ":" + 7771
+                };
+
+            } else if (protocol.equals("UDP")) {
+                command = new String[]{
+                        ffplayPath,
+                        "udp://" + host + ":" + 7772
+                };
+            } else {//protocol RTP/UDP
+                command = new String[]{
+                        ffplayPath,
+                        "-protocol_whitelist",
+                        "file,rtp,udp",
+                        "-i",
+                        "video.sdp"
+                };
+            }
+            new Thread(() -> {
+                ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
+                try {
+                    Process process = pb.start();
+                    process.waitFor();
+                } catch (IOException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
+        }
     }
 
 }

@@ -22,20 +22,21 @@ import java.util.concurrent.CountDownLatch;
 
 public class Server {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
-    private final String videosPath = "src/main/resources/videos";
+    private final String videosDirPath = "src/main/resources/videos";
     FFprobe ffprobe;
     FFmpeg ffmpeg;
     private File videosDir;
     private File[] files;
     private Table<String, String, Integer> availableFiles;
     private int port;
-//    private PrintWriter out;
-//    private BufferedReader in;
     private ObjectInputStream inputStream;
     private ObjectOutputStream outputStream;
     private ServerSocket serverSocket;
     private Socket comSocket;
     private boolean noVideos;
+    private String ipClient;
+    private int portClient;
+    private String ffmpegPath = "C:/ffmpeg-7.0-full_build/bin/ffmpeg.exe";
 
 
     public Server(int port) {
@@ -77,16 +78,16 @@ public class Server {
 
             int downloadSpeed;
             String format, protocol, selectedVideo;
-            boolean argInitialized = false; //false for sending 1st time format & speed
+            boolean argInitialized = false; //false for receiving 1st time format & speed, true for more than once
 
             Object[] arguments = new Object[2];
-            while (true) { //read from stream till client disconnects- load files multiple times
+            while (true) { //read from stream till client disconnects - load files multiple times
                 if (server.comSocket == null || server.comSocket.isClosed()) {
                     System.out.println("Client disconnected - ");
                     break;
                 } else {
                     try {
-                        if(!argInitialized){ //read from stream only if if its first time running
+                        if (!argInitialized) { //read from stream only if its first time running
                             //receive format & download speed from client
                             arguments = (Object[]) server.inputStream.readObject(); //read from client
                         }
@@ -97,29 +98,47 @@ public class Server {
 
                             System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
 
-                            ArrayList<String> videos = new ArrayList<>();
+                            ArrayList<String> videos = new ArrayList<>(); //list of video's available for streaming that are going to be sent to user
                             if (!server.noVideos) { //if there are videos in folder
-                                findSuitableVideos(downloadSpeed, format, videos, server); //find suitable videos based on the format & speed
+                                server.findSuitableVideos(downloadSpeed, format, videos, server); //find suitable videos based on the format & speed - fill arraylist videos
 
 //                                System.out.println(videos);
 
-                                //sent videos' names to client
+                                //sent list with videos' names to client
                                 Object sVideos;
                                 sVideos = videos;
                                 server.outputStream.writeObject(sVideos);
                                 server.outputStream.flush();
 
-                                while (true) { //choose video file multiple times
+                                while (true) { //choose video file multiple times - stream multiple times
                                     arguments = (Object[]) server.inputStream.readObject(); //receive selected video & protocol from client
+                                    //if 1st argument is one of the formats, stream the selected video, else break the loop and continue from receiving format & speed
                                     if (!arguments[0].equals("mkv") && !arguments[0].equals("mp4") && !arguments[0].equals("avi")) {
-                                        System.out.println("format not selected video");
-                                        //protocol can be null
                                         selectedVideo = (String) arguments[0];
-                                        protocol = (String) arguments[1];
+                                        protocol = (String) arguments[1]; //protocol can be null
 
-                                        System.out.println("Selected Video: " + selectedVideo + " protocol: " + protocol);
-                                        System.out.println("format: " + format + " speed: " + downloadSpeed + " selectedVideo: " + selectedVideo + " protocol: " + protocol);
-                                    }else {
+                                        System.out.println("Format: " + format + " Speed: " + downloadSpeed + " SelectedVideo: " + selectedVideo + " Protocol: " + protocol);
+
+                                        //get path & resolution of the selected video
+                                        String path = server.getVideoPath(selectedVideo, format, server);
+                                        int resolution = server.getVideoResolution(selectedVideo, server);
+
+                                        if (path != null) {
+                                            if (protocol == null) {
+                                                //sent video's res in case client hasn't selected protocol
+                                                //that way the client will run the right command to the video
+                                                server.outputStream.writeObject(resolution);
+                                                server.outputStream.flush();
+                                            }
+
+                                            System.out.println("Path: " + path + " Res: " + resolution);
+                                            server.streamVideo(protocol, path, resolution); //stream video to client
+                                        } else
+                                            System.out.println("Video not found");
+
+
+                                    } else {
+                                        //if the arguments are format & speed, initialize variables and break the loop
                                         format = (String) arguments[0];
                                         downloadSpeed = (int) arguments[1];
                                         argInitialized = true;
@@ -128,7 +147,7 @@ public class Server {
 
                                 }
                             } else
-                                System.out.println("NO VIDEOS IN FOLDER");
+                                System.out.println("No videos in folder");
                         } else {
                             System.out.println("Null arguments");
                             break;
@@ -155,32 +174,6 @@ public class Server {
 
     }
 
-    private static void findSuitableVideos(int downloadSpeed, String format, ArrayList<String> videos, Server server) {
-        for (Table.Cell<String, String, Integer> cell : server.availableFiles.cellSet()) {
-            //add name of the videos that have the format requested & has smaller or the same resolution that can be transmitted with the downloadSpeed of the client
-            if (cell.getColumnKey().equals(format)) {
-                if (cell.getValue() <= findSuitableRes(downloadSpeed)) { //if video's resolution is smaller/or same than what the download speed allows
-                    videos.add(cell.getRowKey());
-                }
-            }
-        }
-    }
-
-    private static Integer findSuitableRes(int downloadSpeed) {
-        if (downloadSpeed <= 700) {
-            return 240;
-        } else if (downloadSpeed > 700 && downloadSpeed <= 1000) {
-            return 360;
-        } else if (downloadSpeed > 1000 && downloadSpeed <= 2000) {
-            return 480;
-        } else if (downloadSpeed > 2000 && downloadSpeed <= 4000) {
-            return 720;
-        } else {
-            return 1080;
-        }
-
-    }
-
     private static int getTargetWidth(int height) {
         //set matching target width for each height
         switch (height) {
@@ -197,8 +190,120 @@ public class Server {
         }
     }
 
+    private int getSuitableRes(int downloadSpeed) {
+        if (downloadSpeed <= 700) {
+            return 240;
+        } else if (downloadSpeed > 700 && downloadSpeed <= 1000) {
+            return 360;
+        } else if (downloadSpeed > 1000 && downloadSpeed <= 2000) {
+            return 480;
+        } else if (downloadSpeed > 2000 && downloadSpeed <= 4000) {
+            return 720;
+        } else {
+            return 1080;
+        }
+    }
+
+    private int getVideoResolution(String selectedVideo, Server server) {
+        for (Table.Cell<String, String, Integer> cell : server.availableFiles.cellSet()) {
+            if (cell.getRowKey().equals(selectedVideo)) {
+                return cell.getValue();
+            }
+        }
+        return 0;
+    }
+
+    private void streamVideo(String protocol, String path, int resolution) {
+        if (path != null) {
+            if (protocol == null) { //if client hasn't selected protocol
+                if (resolution == 240) {
+                    protocol = "TCP";
+                } else if (resolution == 360 || resolution == 480) {
+                    protocol = "UDP";
+                } else if (resolution == 720 || resolution == 1080) {
+                    protocol = "RTP/UDP";
+                }
+            }
+
+            String[] command;
+
+            if (protocol != null) {
+                if (protocol.equals("TCP")) {
+                    command = new String[]{
+                            ffmpegPath,
+                            "-i",
+                            path,
+                            "-f",
+                            "mpegts",
+                            "tcp:/" + ipClient + ":" + 7771 + "?listen"
+                    };
+
+                } else if (protocol.equals("UDP")) {
+                    command = new String[]{
+                            ffmpegPath,
+                            "-re",
+                            "-i",
+                            path,
+                            "-f",
+                            "mpegts",
+                            "udp:/" + ipClient + ":" + 7772
+                    };
+                } else { //protocol RTP/UDP
+                    command = new String[]{
+                            ffmpegPath,
+                            "-re",
+                            "-i",
+                            path,
+                            "-an",
+                            "-c:v",
+                            "copy",
+                            "-f",
+                            "rtp",
+                            "-sdp_file",
+                            "video.sdp",
+                            "rtp:/" + ipClient + ":" + 7773
+                    };
+
+                }
+                //run the command in a thread
+                new Thread(() -> {
+                    ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
+                    try {
+                        Process process = pb.start();
+                        process.waitFor();
+                    } catch (IOException | InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
+            }
+
+        }
+    }
+
+    private void findSuitableVideos(int downloadSpeed, String format, ArrayList<String> videos, Server server) {
+        for (Table.Cell<String, String, Integer> cell : server.availableFiles.cellSet()) {
+            //add name of the videos that have the format requested & has smaller or the same resolution that can be transmitted with the downloadSpeed of the client
+            if (cell.getColumnKey().equals(format)) {
+                if (cell.getValue() <= getSuitableRes(downloadSpeed)) { //if video's resolution is smaller/or same than what the download speed allows
+                    videos.add(cell.getRowKey());
+                }
+            }
+        }
+    }
+
+    private String getVideoPath(String selectedVideo, String format, Server server) {
+        for (Table.Cell<String, String, Integer> cell : server.availableFiles.cellSet()) {
+            if (cell.getColumnKey().equals(format)) {
+                if (cell.getRowKey().equals(selectedVideo)) {
+                    return videosDirPath + "/" + cell.getRowKey() + "." + cell.getColumnKey();
+                }
+            }
+        }
+        return null;
+    }
+
     private File[] getListOfFiles() {
-        videosDir = new File(videosPath);
+        videosDir = new File(videosDirPath);
         files = videosDir.listFiles();
         //print list of files in videos directory
         if (files == null) {
@@ -218,6 +323,8 @@ public class Server {
             String filePath = file.getAbsolutePath();
             String fileName = FilenameUtils.getBaseName(filePath);
             String fileExtension = FilenameUtils.getExtension(filePath);
+
+            System.out.println("path " + filePath + " name " + fileName + " ext " + fileExtension);
 
             FFmpegProbeResult probeResult = ffprobe.probe(filePath);
             FFmpegFormat format = probeResult.getFormat();
@@ -325,14 +432,12 @@ public class Server {
     private void establishSocketConnection() {
         try {
             comSocket = serverSocket.accept(); //accept client & create socket for the communication
-            System.out.println("Connected to client at " + comSocket.getInetAddress() + ":" + comSocket.getPort());
-
-//            out = new PrintWriter(comSocket.getOutputStream(), true); //what server sends to client
-//            in = new BufferedReader(new InputStreamReader(comSocket.getInputStream())); //what server receives from client
+            ipClient = String.valueOf(comSocket.getInetAddress());
+            portClient = comSocket.getPort();
+            System.out.println("Connected to client at " + ipClient + ":" + portClient);
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream());
             inputStream = new ObjectInputStream(comSocket.getInputStream()); //objects that server receives from client
-
 
 //            System.out.println("Connection established.");
 
@@ -344,10 +449,6 @@ public class Server {
 
     private void closeClientConnection() {
         try {
-//            if (out != null)
-//                out.close();
-//            if (in != null)
-//                in.close();
             if (inputStream != null)
                 inputStream.close();
             if (outputStream != null)
@@ -357,7 +458,6 @@ public class Server {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
 }
