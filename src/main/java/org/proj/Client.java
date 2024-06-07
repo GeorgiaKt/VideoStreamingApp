@@ -33,21 +33,21 @@ public class Client extends Application {
 
     }
 
-    public String getSelectedFormat() {
-        return selectedFormat;
-    }
-
-    public void setSelectedFormat(String selectedFormat) {
-        this.selectedFormat = selectedFormat;
-    }
-
-    public int getDownloadSpeed() {
-        return downloadSpeed;
-    }
-
-    public void setDownloadSpeed(int downloadSpeed) {
-        this.downloadSpeed = downloadSpeed;
-    }
+//    public String getSelectedFormat() {
+//        return selectedFormat;
+//    }
+//
+//    public void setSelectedFormat(String selectedFormat) {
+//        this.selectedFormat = selectedFormat;
+//    }
+//
+//    public int getDownloadSpeed() {
+//        return downloadSpeed;
+//    }
+//
+//    public void setDownloadSpeed(int downloadSpeed) {
+//        this.downloadSpeed = downloadSpeed;
+//    }
 
     @Override
     public void start(Stage stage) throws IOException {

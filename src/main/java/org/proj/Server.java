@@ -2,6 +2,13 @@ package org.proj;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
@@ -20,7 +27,7 @@ import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 
 
-public class Server {
+public class Server extends Application {
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
     private final String videosDirPath = "src/main/resources/videos";
     FFprobe ffprobe;
@@ -37,10 +44,11 @@ public class Server {
     private String ipClient;
     private int portClient;
     private String ffmpegPath = "C:/ffmpeg-7.0-full_build/bin/ffmpeg.exe";
+    private static ServerController controller; //static in order not to be collected by the garbage collector :(
 
 
-    public Server(int port) {
-        this.port = port; //initialize socket port
+    public Server() {
+        this.port = 8888; //initialize socket port
         try {
             ffprobe = new FFprobe("/ffmpeg-7.0-full_build/bin/ffprobe");
             ffmpeg = new FFmpeg("/ffmpeg-7.0-full_build/bin/ffmpeg");
@@ -50,7 +58,44 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        Server server = new Server(8888);
+        launch(); //launch gui
+    }
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        FXMLLoader fxmlLoader = new FXMLLoader(Server.class.getResource("serverGUI.fxml"));
+        Scene scene = new Scene(fxmlLoader.load(), 700, 500);
+        controller = fxmlLoader.getController();
+        stage.setTitle("Server");
+        stage.setScene(scene);
+
+        //when window is closed, close server socket & application
+        stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent windowEvent) {
+                if (serverSocket != null && serverSocket.isClosed()) {
+                    try {
+                        serverSocket.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                Platform.exit();
+                System.exit(0);
+            }
+
+        });
+
+        stage.show();
+
+        new Thread(() -> {
+            runServer();
+        }).start();
+    }
+
+    private void runServer() {
+        Server server = new Server();
         server.files = server.getListOfFiles();
         System.out.println("List of available files in folder:"); //print files in folder
         for (File file : server.files) {
@@ -68,6 +113,7 @@ public class Server {
         try {
             server.serverSocket = new ServerSocket(server.port); //create socket
             System.out.println("Server is running...");
+            controller.addText("Server is running...");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -84,6 +130,7 @@ public class Server {
             while (true) { //read from stream till client disconnects - load files multiple times
                 if (server.comSocket == null || server.comSocket.isClosed()) {
                     System.out.println("Client disconnected - ");
+                    controller.addText("Client disconnected - ");
                     break;
                 } else {
                     try {
@@ -96,7 +143,8 @@ public class Server {
                             format = (String) arguments[0];
                             downloadSpeed = (int) arguments[1];
 
-                            System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
+                            controller.addText("Download speed: " + downloadSpeed + " Kbps");
+//                            System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
 
                             ArrayList<String> videos = new ArrayList<>(); //list of video's available for streaming that are going to be sent to user
                             if (!server.noVideos) { //if there are videos in folder
@@ -117,7 +165,8 @@ public class Server {
                                         selectedVideo = (String) arguments[0];
                                         protocol = (String) arguments[1]; //protocol can be null
 
-                                        System.out.println("Format: " + format + " Speed: " + downloadSpeed + " SelectedVideo: " + selectedVideo + " Protocol: " + protocol);
+                                        System.out.println("Requested Video Info: " + " Name: " + selectedVideo + " Format: " + format + " Protocol: " + protocol);
+                                        controller.addText("Requested Video Info: " + " Name: " + selectedVideo + ", Format: " + format + ", Protocol: " + protocol);
 
                                         //get path & resolution of the selected video
                                         String path = server.getVideoPath(selectedVideo, format, server);
@@ -155,14 +204,17 @@ public class Server {
 
                     } catch (SocketException e) {
                         //client disconnected
-                        System.out.println("Client disconnected");
+                        System.out.println("Client disconnected !");
+                        controller.addText("Client disconnected !");
                         break;
                     } catch (EOFException e) {
                         //stream closed (EOF reached)
-                        System.out.println("Stream closed by client");
+                        System.out.println("Stream closed by client !");
+                        controller.addText("Stream closed by client !");
                         break;
                     } catch (IOException | ClassNotFoundException e) {
                         System.out.println("Error reading from client: " + e.getMessage());
+                        controller.addText("Error reading from client: " + e.getMessage());
                         e.printStackTrace();
                         break;
                     }
@@ -266,15 +318,27 @@ public class Server {
 
                 }
                 //run the command in a thread
-                new Thread(() -> {
+                Thread thread = new Thread(() -> {
                     ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
                     try {
                         Process process = pb.start();
+                        controller.addText("Streaming Video...");
                         process.waitFor();
                     } catch (IOException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                }).start();
+                });
+                thread.start();
+
+                try {
+                    // Wait for the thread to finish
+                    thread.join();
+                    System.out.println("Streaming completed");
+                    controller.addText("Streaming completed");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
             }
 
         }
@@ -307,16 +371,19 @@ public class Server {
         files = videosDir.listFiles();
         //print list of files in videos directory
         if (files == null) {
-            System.out.println("Folder not found !");
-        } else if (files.length == 0)
-            System.out.println("No videos found in folder !");
-        else {
+            System.out.println("FAILED: Folder not found !");
+            controller.addText("FAILED: Folder not found !");
+        } else if (files.length == 0) {
+            System.out.println("FAILED: No videos found in folder !");
+            controller.addText("FAILED: No videos found in folder !");
+        } else {
             return files;
         }
         return new File[0];
     }
 
     private void createRemainingVideos() throws IOException {
+        controller.addText("Creating videos...");
         //create videos in order each one to exist in avi, mkv, mp4 and in all resolutions smaller that the original
         for (File file : files) {
             //initialize local variables filePath, fileName, fileExtension for each file
@@ -428,13 +495,13 @@ public class Server {
 
     }
 
-
     private void establishSocketConnection() {
         try {
             comSocket = serverSocket.accept(); //accept client & create socket for the communication
             ipClient = String.valueOf(comSocket.getInetAddress());
             portClient = comSocket.getPort();
             System.out.println("Connected to client at " + ipClient + ":" + portClient);
+            controller.addText("Connected to client at " + ipClient + ":" + portClient);
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream());
             inputStream = new ObjectInputStream(comSocket.getInputStream()); //objects that server receives from client
@@ -448,6 +515,7 @@ public class Server {
     }
 
     private void closeClientConnection() {
+        controller.addText("Closing Client Connection...");
         try {
             if (inputStream != null)
                 inputStream.close();
