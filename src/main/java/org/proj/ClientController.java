@@ -67,11 +67,23 @@ public class ClientController implements Initializable {
                     label.setText("Selected video: " + selectedVideo);
                     client.sendSelectedVideoAndProtocol(selectedVideo, protocolSelected);
 
-                    if(protocolSelected == null){
+                    if (protocolSelected == null) {
                         resolution = client.receiveVideoResolution();
                     }
 
                     client.playVideo(protocolSelected, resolution);
+
+
+                    //after the video starts playing, unselects the selected item on list view - ability to select the same video afterward
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(100); //sleep for 100 ms in order to make sure the video has started playing
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        listView.getSelectionModel().clearSelection(); //unselect list view item
+                    }).start();
+
                 }
             }
         });
