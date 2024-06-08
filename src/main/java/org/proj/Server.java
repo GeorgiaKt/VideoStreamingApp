@@ -89,9 +89,7 @@ public class Server extends Application {
 
         stage.show();
 
-        new Thread(() -> {
-            runServer();
-        }).start();
+        new Thread(this::runServer).start();
     }
 
     private void runServer() {

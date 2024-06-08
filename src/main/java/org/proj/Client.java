@@ -14,11 +14,9 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
 
 public class Client extends Application {
-    private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization
+    private static ClientController controller;
     private Socket comSocket;
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
@@ -33,63 +31,51 @@ public class Client extends Application {
 
     }
 
-//    public String getSelectedFormat() {
-//        return selectedFormat;
-//    }
-//
-//    public void setSelectedFormat(String selectedFormat) {
-//        this.selectedFormat = selectedFormat;
-//    }
-//
-//    public int getDownloadSpeed() {
-//        return downloadSpeed;
-//    }
-//
-//    public void setDownloadSpeed(int downloadSpeed) {
-//        this.downloadSpeed = downloadSpeed;
-//    }
-
     @Override
     public void start(Stage stage) throws IOException {
-        establishSocketConnection();
-        downloadSpeedTest();
-
-        //stop the execution of the main thread until the download speed test is completed
-        try {
-            latch.await(); //wait for download speed test to complete
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+        while (true){
+            if(establishSocketConnection()) //if client connects to server successfully then break the loop
+                break;
         }
 
         FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 700, 500);
-        ClientController controller = fxmlLoader.getController();
+        controller = fxmlLoader.getController();
         controller.setClient(this);
         stage.setTitle("Client");
         stage.setScene(scene);
 
         //when window is closed, close connection with server
-//        stage.setOnCloseRequest(event ->{
-//            closeConnection();
-//            Platform.exit();
-//        });
+        stage.setOnCloseRequest(event ->{
+            closeConnection();
+            Platform.exit();
+        });
 
         stage.show();
+
+        new Thread(this::runClient).start();
+
     }
 
-    private void establishSocketConnection() {
+    private void runClient() {
+        downloadSpeedTest();
+    }
+
+
+    private boolean establishSocketConnection() {
         try {
             comSocket = new Socket(host, port); //create socket for the communication between client and a specific host in a specific port
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //objects client sends to server
             inputStream = new ObjectInputStream(comSocket.getInputStream());
 
-            System.out.println("Client connected");
+            System.out.println("Client connected at: " + host + ":" + port);
+            return true;
 
         } catch (IOException e) {
-            System.out.println("An exception has occurred on port " + port);
+            System.out.println("FAILED to connect at port: " + port);
             System.out.println(e.getMessage());
+            return false;
         }
     }
 
@@ -110,7 +96,7 @@ public class Client extends Application {
                 downloadSpeed = transferRateKbps.intValue();
                 System.out.println("Download speed in Kbps (int): " + downloadSpeed);
 
-                latch.countDown(); //notify main thread that the download speed test is completed
+                controller.enableBtn();
             }
 
             @Override

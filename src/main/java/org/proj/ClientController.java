@@ -17,9 +17,6 @@ import java.util.ResourceBundle;
 public class ClientController implements Initializable {
 
     @FXML
-    private MenuBar MenuBar;
-
-    @FXML
     private VBox VBoxRight;
 
     @FXML
@@ -56,6 +53,8 @@ public class ClientController implements Initializable {
         ObservableList<String> protocolList = FXCollections.observableArrayList("TCP", "UDP", "RTP/UDP");
         protocolComboBox.setItems(protocolList);
         label.setText("Select Format");
+
+        btn.setDisable(true); //disable button until download speed test is completed
 
         listView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
             //add listener for when a list view item is selected
@@ -124,5 +123,8 @@ public class ClientController implements Initializable {
         listView.getItems().clear(); //delete all items that are on the list view
         listView.getItems().addAll(videos); //and add all the new ones
 
+    }
+    public void enableBtn(){ //enable button when speed test is completed
+        btn.setDisable(false);
     }
 }
