@@ -41,6 +41,7 @@ public class ClientController implements Initializable {
     private String formatSelected;
     private String protocolSelected;
     private int resolution = 0;
+    private boolean noVideos;
 
     public void setClient(Client client) {
         this.client = client;
@@ -114,17 +115,30 @@ public class ClientController implements Initializable {
 
 
             loadListView();
-            label.setText("Select video to play");
+            if(!noVideos){ //change label text based on noVideos flag
+                label.setText("Select video to play");
+            }else
+                label.setText("No videos available !");
+
         }
     }
 
     private void loadListView() {
         ArrayList<String> videos = client.receiveSuitableVideos();
-        listView.getItems().clear(); //delete all items that are on the list view
-        listView.getItems().addAll(videos); //and add all the new ones
+        //change flag for each case
+        if (videos == null) {
+            noVideos = true;
+            System.out.println("No videos available !");
+        } else {
+            //load list view items only when there are available videos from server
+            noVideos = false;
+            listView.getItems().clear(); //delete all items that are on the list view
+            listView.getItems().addAll(videos); //and add all the new ones
+        }
 
     }
-    public void enableBtn(){ //enable button when speed test is completed
+
+    public void enableBtn() { //enable button when speed test is completed
         btn.setDisable(false);
     }
 }

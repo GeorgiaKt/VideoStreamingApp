@@ -193,8 +193,14 @@ public class Server extends Application {
                                     }
 
                                 }
-                            } else
+                            } else { //if there are no videos in folder, send null object
                                 System.out.println("No videos in folder");
+                                //send a null object
+                                Object noVideosObj = null;
+                                server.outputStream.writeObject(noVideosObj);
+                                server.outputStream.flush();
+
+                            }
                         } else {
                             System.out.println("Null arguments");
                             break;
