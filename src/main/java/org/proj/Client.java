@@ -9,6 +9,10 @@ import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.apache.commons.lang3.StringUtils;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -16,12 +20,13 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class Client extends Application {
+    static Logger log = LogManager.getLogger(Server.class);
     private static ClientController controller;
     private Socket comSocket;
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
-    private String host = "127.0.0.1";
-    private int port = 8888;
+    private final String host = "127.0.0.1";
+    private final int port = 8888;
     private int downloadSpeed; //download speed
     private String selectedFormat;
     private String ffplayPath = "C:/ffmpeg-7.0-full_build/bin/ffplay.exe";
@@ -33,15 +38,17 @@ public class Client extends Application {
 
     @Override
     public void start(Stage stage) throws IOException {
+        //connect to server
         while (true){
             if(establishSocketConnection()) //if client connects to server successfully then break the loop
                 break;
         }
 
+        //load gui
         FXMLLoader fxmlLoader = new FXMLLoader(Client.class.getResource("clientGUI.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 700, 500);
         controller = fxmlLoader.getController();
-        controller.setClient(this);
+        controller.setClient(this, log);
         stage.setTitle("Client");
         stage.setScene(scene);
 
@@ -58,6 +65,7 @@ public class Client extends Application {
     }
 
     private void runClient() {
+        //run on a different thread
         downloadSpeedTest();
     }
 
@@ -69,11 +77,11 @@ public class Client extends Application {
             outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //objects client sends to server
             inputStream = new ObjectInputStream(comSocket.getInputStream());
 
-            System.out.println("Client connected at: " + host + ":" + port);
+            log.debug("Client connected at: " + host + ":" + port);
             return true;
 
         } catch (IOException e) {
-            System.out.println("FAILED to connect at port: " + port);
+            log.error("Failed to connect at port: " + port);
             System.out.println(e.getMessage());
             return false;
         }
@@ -81,38 +89,32 @@ public class Client extends Application {
 
     private void downloadSpeedTest() {
         final SpeedTestSocket speedTestSocket = new SpeedTestSocket();
+        log.info("Speed Test Started");
         speedTestSocket.addSpeedTestListener(new ISpeedTestListener() {
 
             @Override
             public void onCompletion(final SpeedTestReport report) {
                 //called when download/upload is complete
-                System.out.println("[COMPLETED] Download rate in bit/s: " + report.getTransferRateBit());
-//                System.out.println("[COMPLETED] SpeedTestMode: " + report.getSpeedTestMode());
-//                System.out.println("[COMPLETED] TotalPacketSize: " + report.getTotalPacketSize());
-
                 BigDecimal transferRate = report.getTransferRateBit();
                 BigDecimal transferRateKbps = convertToKbps(transferRate); //convert to Kbps
-                System.out.println("[COMPLETED] Download rate in Kbps: " + transferRateKbps); //convert Big Decimal to int
-                downloadSpeed = transferRateKbps.intValue();
-                System.out.println("Download speed in Kbps (int): " + downloadSpeed);
-
+                downloadSpeed = transferRateKbps.intValue(); //convert Big Decimal to int
+                log.info("Speed Test Completed");
+                log.debug("Download Speed: " + downloadSpeed + " Kbps");
                 controller.enableBtn();
             }
 
             @Override
             public void onError(final SpeedTestError speedTestError, final String errorMessage) {
+                log.error("Speed Test Failed: " + errorMessage);
             }
 
             @Override
             public void onProgress(final float percent, final SpeedTestReport downloadReport) {
-//                System.out.println("Percent: " + percent + " DownloadReport: " + downloadReport);
-//                System.out.println("on progress...");
-
+                //do nothing
             }
         });
 
-        speedTestSocket.startFixedDownload("ftp://speedtest:speedtest@ftp.otenet.gr/test1Mb.db",
-                5000);
+        speedTestSocket.startFixedDownload("ftp://speedtest:speedtest@ftp.otenet.gr/test1Mb.db", 5000); //run speed test for 5 seconds
 
     }
 
@@ -121,7 +123,7 @@ public class Client extends Application {
     }
 
     private void closeConnection() {
-        System.out.println("Closing connection...");
+        log.info("Closing connection...");
         try {
             if (comSocket != null && comSocket.isClosed())
                 comSocket.close();
@@ -137,7 +139,7 @@ public class Client extends Application {
 
 
     public void sendFormatAndSpeed(String format) {
-        System.out.println("speed " + downloadSpeed + " format " + format);
+        log.debug("Sent: format: " + format + ", speed: " + downloadSpeed);
         selectedFormat = format;
         //storing arguments (download speed & format) in Object array
         Object[] speedFormat = new Object[2];
@@ -163,14 +165,19 @@ public class Client extends Application {
         }
 
         videos = (ArrayList<String>) sVideos;
-        System.out.println("RECEIVED: " + videos);
+        if(videos != null){ //videos can also be null
+            for (int i = 0; i < videos.size(); i++)
+                videos.set(i, videos.get(i) + "." + selectedFormat);
+        } //add at the end of every video name, the format
+        log.debug("Received: Available Videos for Streaming: " + videos);
         return videos;
 
     }
 
     public void sendSelectedVideoAndProtocol(String selectedVideo, String protocol) {
-        System.out.println("selected video: " + selectedVideo + " protocol: " + protocol);
+        log.debug("Sent: selected video's name: " + selectedVideo + ", protocol: " + protocol);
         Object[] videoProtocol = new Object[2];
+        selectedVideo = StringUtils.removeEnd(selectedVideo, "." + selectedFormat); //remove the format from the end
         videoProtocol[0] = selectedVideo;
         videoProtocol[1] = protocol;
         try {
@@ -190,7 +197,7 @@ public class Client extends Application {
             throw new RuntimeException(e);
         }
 
-        System.out.println("RECEIVED: " + res);
+        log.debug("Received: resolution:" + res);
         return (int) res;
     }
 
@@ -232,7 +239,9 @@ public class Client extends Application {
                 ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
                 try {
                     Process process = pb.start();
+                    log.info("Video started");
                     process.waitFor();
+                    log.info("Video ended");
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }

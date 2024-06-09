@@ -7,6 +7,7 @@ module MultimediaApp {
     requires org.apache.commons.io;
     requires org.apache.commons.lang3;
     requires javafx.graphics;
+    requires org.apache.logging.log4j;
 
 
     opens org.proj to javafx.fxml;

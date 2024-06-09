@@ -10,6 +10,8 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
+import org.apache.logging.log4j.Logger;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
@@ -36,6 +38,7 @@ public class ClientController implements Initializable {
     @FXML
     private ComboBox<String> protocolComboBox;
 
+    private Logger log;
     private Client client;
     private String selectedVideo;
     private String formatSelected;
@@ -43,8 +46,9 @@ public class ClientController implements Initializable {
     private int resolution = 0;
     private boolean noVideos;
 
-    public void setClient(Client client) {
+    public void setClient(Client client, Logger log) {
         this.client = client;
+        this.log = log;
     }
 
     @Override
@@ -74,7 +78,7 @@ public class ClientController implements Initializable {
                     client.playVideo(protocolSelected, resolution);
 
 
-                    //after the video starts playing, unselects the selected item on list view - ability to select the same video afterward
+                    //after the video starts playing, unselects the selected item on list view - ability to select the same video afterwards
                     new Thread(() -> {
                         try {
                             Thread.sleep(100); //sleep for 100 ms in order to make sure the video has started playing
@@ -106,17 +110,13 @@ public class ClientController implements Initializable {
         if (formatComboBox.getSelectionModel().getSelectedItem() == null) //if user doesnt select format
             label.setText("Format is required !");
         else {
-
-            System.out.println("Format Selected: " + formatSelected);
-            System.out.println("Protocol Selected: " + protocolSelected);
-
             label.setText("");
             client.sendFormatAndSpeed(formatSelected); //send to server download speed & format
 
 
             loadListView();
             if(!noVideos){ //change label text based on noVideos flag
-                label.setText("Select video to play");
+                label.setText("Select video to play and protocol (optional)");
             }else
                 label.setText("No videos available !");
 
@@ -128,12 +128,13 @@ public class ClientController implements Initializable {
         //change flag for each case
         if (videos == null) {
             noVideos = true;
-            System.out.println("No videos available !");
+            log.error("No videos available !");
         } else {
             //load list view items only when there are available videos from server
             noVideos = false;
             listView.getItems().clear(); //delete all items that are on the list view
             listView.getItems().addAll(videos); //and add all the new ones
+            log.info("List view items loaded");
         }
 
     }
