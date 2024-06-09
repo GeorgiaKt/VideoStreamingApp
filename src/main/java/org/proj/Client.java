@@ -22,11 +22,11 @@ import java.util.ArrayList;
 public class Client extends Application {
     static Logger log = LogManager.getLogger(Server.class);
     private static ClientController controller;
+    private final String host = "127.0.0.1";
+    private final int port = 8888;
     private Socket comSocket;
     private ObjectOutputStream outputStream;
     private ObjectInputStream inputStream;
-    private final String host = "127.0.0.1";
-    private final int port = 8888;
     private int downloadSpeed; //download speed
     private String selectedFormat;
     private String ffplayPath = "C:/ffmpeg-7.0-full_build/bin/ffplay.exe";
@@ -40,8 +40,8 @@ public class Client extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         //connect to server
-        while (true){
-            if(establishSocketConnection()) //if client connects to server successfully then break the loop
+        while (true) {
+            if (establishSocketConnection()) //if client connects to server successfully then break the loop
                 break;
         }
 
@@ -54,7 +54,7 @@ public class Client extends Application {
         stage.setScene(scene);
 
         //when window is closed, close connection with server
-        stage.setOnCloseRequest(event ->{
+        stage.setOnCloseRequest(event -> {
             closeConnection();
             if (videoProcess != null && videoProcess.isAlive()) { //if the video window is still open, close it
                 videoProcess.destroy();
@@ -142,7 +142,6 @@ public class Client extends Application {
         }
     }
 
-
     public void sendFormatAndSpeed(String format) {
         log.debug("Sent: format: " + format + ", speed: " + downloadSpeed);
         selectedFormat = format;
@@ -170,7 +169,7 @@ public class Client extends Application {
         }
 
         videos = (ArrayList<String>) sVideos;
-        if(videos != null){ //videos can also be null
+        if (videos != null) { //videos can also be null
             for (int i = 0; i < videos.size(); i++)
                 videos.set(i, videos.get(i) + "." + selectedFormat);
         } //add at the end of every video name, the format

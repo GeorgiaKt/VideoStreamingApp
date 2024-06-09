@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 public class Server extends Application {
     static Logger log = LogManager.getLogger(Server.class);
     private static ServerController controller; //static in order not to be collected by the garbage collector :(
+    private static File videosFolder;
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization - wait for data to be stored in a Table
     private final String videosFolderPath = "src/main/resources/videos";
     private final String[] extensions = {"mp4", "avi", "mkv"}; //3 extensions in total
@@ -40,7 +41,6 @@ public class Server extends Application {
     private final String ffmpegPath = "C:/ffmpeg-7.0-full_build/bin/ffmpeg.exe";
     private final FFprobe ffprobe;
     private final FFmpeg ffmpeg;
-    private static File videosFolder;
     private File[] files;
     private boolean noVideos; //flag, false if there are videos, true if there are no videos
     private String filePath;
@@ -428,7 +428,7 @@ public class Server extends Application {
             fileName = FilenameUtils.getBaseName(filePath);
             fileExtension = FilenameUtils.getExtension(filePath);
 
-            if(fileName.equals(selectedVideo))
+            if (fileName.equals(selectedVideo))
                 return true;
 
         }

@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.ResourceBundle;
 
 public class ClientController implements Initializable {
-
     @FXML
     private VBox VBoxRight;
 
@@ -104,7 +103,6 @@ public class ClientController implements Initializable {
             protocolSelected = protocolComboBox.getSelectionModel().getSelectedItem();
     }
 
-
     public void btnSelect(ActionEvent actionEvent) {
         //format is required to proceed
         if (formatComboBox.getSelectionModel().getSelectedItem() == null) //if user doesnt select format
@@ -115,9 +113,9 @@ public class ClientController implements Initializable {
 
 
             loadListView();
-            if(!noVideos){ //change label text based on noVideos flag
+            if (!noVideos) { //change label text based on noVideos flag
                 label.setText("Select video to play and protocol (optional)");
-            }else
+            } else
                 label.setText("No videos available !");
 
         }
