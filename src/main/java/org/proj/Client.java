@@ -30,6 +30,7 @@ public class Client extends Application {
     private int downloadSpeed; //download speed
     private String selectedFormat;
     private String ffplayPath = "C:/ffmpeg-7.0-full_build/bin/ffplay.exe";
+    private Process videoProcess;
 
     public static void main(String[] args) {
         launch(); //launch gui
@@ -55,7 +56,11 @@ public class Client extends Application {
         //when window is closed, close connection with server
         stage.setOnCloseRequest(event ->{
             closeConnection();
+            if (videoProcess != null && videoProcess.isAlive()) { //if the video window is still open, close it
+                videoProcess.destroy();
+            }
             Platform.exit();
+            System.exit(0);
         });
 
         stage.show();
@@ -238,9 +243,9 @@ public class Client extends Application {
             new Thread(() -> {
                 ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
                 try {
-                    Process process = pb.start();
+                    videoProcess = pb.start();
                     log.info("Video started");
-                    process.waitFor();
+                    videoProcess.waitFor();
                     log.info("Video ended");
                 } catch (IOException | InterruptedException e) {
                     throw new RuntimeException(e);
