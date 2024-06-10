@@ -1,5 +1,6 @@
 package org.proj;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -56,16 +57,14 @@ public class ClientController implements Initializable {
         formatComboBox.setItems(formatList);
         ObservableList<String> protocolList = FXCollections.observableArrayList("TCP", "UDP", "RTP/UDP");
         protocolComboBox.setItems(protocolList);
-        label.setText("Select Format");
+        label.setText("Waiting for speed test to complete...");
 
         btn.setDisable(true); //disable button until download speed test is completed
-
         listView.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
             //add listener for when a list view item is selected
             @Override
             public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
                 selectedVideo = listView.getSelectionModel().getSelectedItem();
-//                selectedVideo = t1;
                 if (selectedVideo != null) {
                     label.setText("Selected video: " + selectedVideo);
                     client.sendSelectedVideoAndProtocol(selectedVideo, protocolSelected);
@@ -74,8 +73,11 @@ public class ClientController implements Initializable {
                         resolution = client.receiveVideoResolution();
                     }
 
-                    client.playVideo(protocolSelected, resolution);
-
+                    boolean videoFound = client.receiveIsVideoFound();
+                    if (videoFound)
+                        client.playVideo(protocolSelected, resolution);
+                    else
+                        label.setText("Video not Found !");
 
                     //after the video starts playing, unselects the selected item on list view - ability to select the same video afterwards
                     new Thread(() -> {
@@ -88,6 +90,16 @@ public class ClientController implements Initializable {
                     }).start();
 
                 }
+            }
+        });
+
+        //add listener for when the button gets enabled
+        btn.disabledProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) { //t1 is the new value the btn gets (enabled/disabled)
+                //when the button gets enabled
+                if (!t1)
+                    label.setText("Select Format"); //update label text
             }
         });
     }
@@ -116,7 +128,6 @@ public class ClientController implements Initializable {
                 label.setText("Select video to play and protocol (optional)");
             } else
                 label.setText("No videos available !");
-
         }
     }
 
@@ -133,10 +144,10 @@ public class ClientController implements Initializable {
             listView.getItems().addAll(videos); //and add all the new ones
             log.info("List view items loaded");
         }
-
     }
 
     public void enableBtn() { //enable button when speed test is completed
-        btn.setDisable(false);
+        Platform.runLater(() -> btn.setDisable(false)); //needs to be run on the ui-modifying thread
     }
+
 }

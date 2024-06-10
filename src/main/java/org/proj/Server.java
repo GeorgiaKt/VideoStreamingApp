@@ -17,7 +17,6 @@ import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import net.bramp.ffmpeg.probe.FFmpegStream;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -76,22 +75,6 @@ public class Server extends Application {
         launch(); //launch gui
     }
 
-    private static int getTargetWidth(int height) {
-        //set matching target width for each height
-        switch (height) {
-            case 1080:
-                return 1920;
-            case 720:
-                return 1280;
-            case 480:
-                return 854;
-            case 360:
-                return 640;
-            default:
-                return 426;
-        }
-    }
-
     @Override
     public void start(Stage stage) throws Exception {
         //load gui
@@ -128,17 +111,11 @@ public class Server extends Application {
         Server server = new Server();
         server.videoFiles = server.getListOfVideoFiles(); //get list of files in videos folder
 
-        if(server.videoFiles != null){
+        if (server.videoFiles != null) {
             controller.addText("Videos found: " + server.videoFiles.size() + " of " + server.filesCounter + " files in total");
         }
 
-//        //print files in folder
-//        System.out.println("List of available files in folder:"); //print files in folder
-//        for (File file : server.files) {
-//            System.out.println(file.getName() + " " + file.getAbsolutePath());
-//        }
-
-        if(server.videoFiles != null){
+        if (server.videoFiles != null) {
             try {
                 //create remaining videos (formats: mkv, mp4, avi & resolutions < original) & store them in Table
                 server.createRemainingVideos();
@@ -151,7 +128,6 @@ public class Server extends Application {
 
         try {
             server.serverSocket = new ServerSocket(server.port); //create socket
-//            System.out.println("Server is running...");
             log.info("Server is running...");
             controller.addText("Server is running...");
         } catch (IOException e) {
@@ -181,7 +157,6 @@ public class Server extends Application {
 
                     controller.addText("Received: Format: " + format + ", Download Speed: " + downloadSpeed + " Kbps");
                     log.debug("Received: Format: " + format + ", Download Speed: " + downloadSpeed + " Kbps");
-//                            System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
 
                     ArrayList<String> videos = new ArrayList<>(); //list of video's available for streaming
                     if (!server.noVideos) { //if there are videos in folder
@@ -197,7 +172,7 @@ public class Server extends Application {
                         while (true) { //choose video file multiple times - stream multiple times
                             //3rd receive selected video's name & protocol
                             arguments = (Object[]) server.inputStream.readObject(); //receive selected video & protocol from client
-                            //if 1st argument is not one of the formats, stream the selected video, else is format & speed so break
+                            //if 1st argument is not one of the formats, stream the selected video, else its format & speed, so break
                             if (!arguments[0].equals("mkv") && !arguments[0].equals("mp4") && !arguments[0].equals("avi")) {
                                 selectedVideo = (String) arguments[0];
                                 protocol = (String) arguments[1]; //protocol can be null
@@ -208,20 +183,29 @@ public class Server extends Application {
                                 //get path & resolution of the selected video
                                 String path = server.getVideoPath(selectedVideo, format, server);
                                 int resolution = server.getVideoResolution(selectedVideo, server);
+                                log.debug("Selected Video's Path: " + path + ", Resolution: " + resolution);
 
+                                if (protocol == null) { //if protocol not selected
+                                    //sent video's res, that way the client will run the right command to play the video
+                                    server.outputStream.writeObject(resolution);
+                                    server.outputStream.flush();
+                                }
+
+                                //4th send code for video found or not
                                 if (path != null && fileExists(selectedVideo)) {
-                                    if (protocol == null) { //if protocol not selected
-                                        //sent video's res, that way the client will run the right command to play the video
-                                        server.outputStream.writeObject(resolution);
-                                        server.outputStream.flush();
-                                    }
+                                    //code 1 for video found
+                                    server.outputStream.writeObject(1);
+                                    server.outputStream.flush();
 
-                                    log.debug("Selected Video's Path: " + path + ", Resolution: " + resolution);
-                                    //4th stream video
+                                    //5th stream video
                                     server.streamVideo(protocol, path, resolution); //stream video to client
                                 } else {
                                     log.error("Video not found !");
                                     controller.addText("Video not found !");
+
+                                    //code 0 for video not found
+                                    server.outputStream.writeObject(0);
+                                    server.outputStream.flush();
                                 }
 
                             } else {
@@ -266,13 +250,13 @@ public class Server extends Application {
         videosFolder = new File(videosFolderPath);
         File[] files = videosFolder.listFiles();
         filesCounter = files.length;
-        for(File file : files){
+        for (File file : files) {
             //add only supported videos to array list (mkv, mp4, avi)
-            if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
+            if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
                 videoFiles.add(file);
-            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
+            else if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
                 videoFiles.add(file);
-            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
+            else if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
                 videoFiles.add(file);
         }
 
@@ -329,16 +313,13 @@ public class Server extends Application {
                         createTargetFile(ffprobe, ffmpeg, targetFile, filePath, targetFormat, res);
                     }
                 }
-
             }
-
         }
     }
 
     private void createTargetFile(FFprobe ffprobe, FFmpeg ffmpeg, File file, String filePath, String targetFormat, Integer targetHeight) {
         int targetWidth = getTargetWidth(targetHeight); //get matching width for the specific height
         //create the output file
-//        System.out.println("Creating file: " + file.getAbsolutePath());
         log.debug("Creating file: " + file.getAbsolutePath());
         //create new video
         FFmpegBuilder builder = new FFmpegBuilder()
@@ -351,6 +332,22 @@ public class Server extends Application {
         //override is false in order not to create files that already exist (based on the name of the file)
         FFmpegExecutor executor = new FFmpegExecutor(ffmpeg, ffprobe);
         executor.createJob(builder).run();
+    }
+
+    private static int getTargetWidth(int height) {
+        //set matching target width for each height
+        switch (height) {
+            case 1080:
+                return 1920;
+            case 720:
+                return 1280;
+            case 480:
+                return 854;
+            case 360:
+                return 640;
+            default:
+                return 426;
+        }
     }
 
     private void storeAvailableFiles() throws IOException {
@@ -377,13 +374,13 @@ public class Server extends Application {
     private void refreshVideoFileList() {
         File[] files = videosFolder.listFiles(); //refresh list
         videoFiles.clear();
-        for(File file : files){
+        for (File file : files) {
             //add only supported videos to array list
-            if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
+            if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
                 videoFiles.add(file);
-            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
+            else if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
                 videoFiles.add(file);
-            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
+            else if (FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
                 videoFiles.add(file);
         }
     }
@@ -396,8 +393,8 @@ public class Server extends Application {
             log.debug("Connected to client at " + ipClient + ":" + portClient);
             controller.addText("Connected to client at " + ipClient + ":" + portClient);
 
-            outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //object(s) sent to client
-            inputStream = new ObjectInputStream(comSocket.getInputStream()); //object(s) received from client
+            outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //object stream for sending to client
+            inputStream = new ObjectInputStream(comSocket.getInputStream()); //object stream for receiving from client
 
         } catch (IOException e) {
             log.error("Failed to connect to client !");
@@ -462,7 +459,6 @@ public class Server extends Application {
 
             if (fileName.equals(selectedVideo))
                 return true;
-
         }
         return false;
     }

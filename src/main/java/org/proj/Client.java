@@ -10,7 +10,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.apache.commons.lang3.StringUtils;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,12 +28,11 @@ public class Client extends Application {
     private ObjectInputStream inputStream;
     private int downloadSpeed; //download speed
     private String selectedFormat;
-    private String ffplayPath = "C:/ffmpeg-7.0-full_build/bin/ffplay.exe";
+    private String ffplayPath = "/ffmpeg-7.0-full_build/bin/ffplay.exe";
     private Process videoProcess;
 
     public static void main(String[] args) {
         launch(); //launch gui
-
     }
 
     @Override
@@ -74,7 +72,6 @@ public class Client extends Application {
         downloadSpeedTest();
     }
 
-
     private boolean establishSocketConnection() {
         try {
             comSocket = new Socket(host, port); //create socket for the communication between client and a specific host in a specific port
@@ -96,7 +93,6 @@ public class Client extends Application {
         final SpeedTestSocket speedTestSocket = new SpeedTestSocket();
         log.info("Speed Test Started");
         speedTestSocket.addSpeedTestListener(new ISpeedTestListener() {
-
             @Override
             public void onCompletion(final SpeedTestReport report) {
                 //called when download/upload is complete
@@ -120,7 +116,6 @@ public class Client extends Application {
         });
 
         speedTestSocket.startFixedDownload("ftp://speedtest:speedtest@ftp.otenet.gr/test1Mb.db", 5000); //run speed test for 5 seconds
-
     }
 
     private BigDecimal convertToKbps(BigDecimal transferRateBit) {
@@ -142,6 +137,7 @@ public class Client extends Application {
         }
     }
 
+    //methods for exchange information between server & client
     public void sendFormatAndSpeed(String format) {
         log.debug("Sent: format: " + format + ", speed: " + downloadSpeed);
         selectedFormat = format;
@@ -173,9 +169,8 @@ public class Client extends Application {
             for (int i = 0; i < videos.size(); i++)
                 videos.set(i, videos.get(i) + "." + selectedFormat);
         } //add at the end of every video name, the format
-        log.debug("Received: Available Videos for Streaming: " + videos);
+        log.debug("Received: available videos for streaming: " + videos);
         return videos;
-
     }
 
     public void sendSelectedVideoAndProtocol(String selectedVideo, String protocol) {
@@ -190,7 +185,6 @@ public class Client extends Application {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     public int receiveVideoResolution() {
@@ -201,8 +195,28 @@ public class Client extends Application {
             throw new RuntimeException(e);
         }
 
-        log.debug("Received: resolution:" + res);
+        log.debug("Received: resolution: " + res);
+        if (res == null)
+            res = 0;
         return (int) res;
+    }
+
+    public boolean receiveIsVideoFound() {
+        Object res;
+        try {
+            res = inputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        if ((int) res == 0) {
+            log.debug("Received: code: " + res + " (video not found)");
+            return false;
+        } else {
+            log.debug("Received: code: " + res + " (video found)");
+            return true;
+        }
+
     }
 
     public void playVideo(String protocol, int resolution) {
@@ -224,7 +238,6 @@ public class Client extends Application {
                         ffplayPath,
                         "tcp://" + host + ":" + 7771
                 };
-
             } else if (protocol.equals("UDP")) {
                 command = new String[]{
                         ffplayPath,
