@@ -41,7 +41,8 @@ public class Server extends Application {
     private final String ffmpegPath = "C:/ffmpeg-7.0-full_build/bin/ffmpeg.exe";
     private final FFprobe ffprobe;
     private final FFmpeg ffmpeg;
-    private File[] files;
+    private ArrayList<File> videoFiles;
+    private int filesCounter;
     private boolean noVideos; //flag, false if there are videos, true if there are no videos
     private String filePath;
     private String fileName;
@@ -67,6 +68,7 @@ public class Server extends Application {
         filePath = "";
         fileName = "";
         fileExtension = "";
+        videoFiles = new ArrayList<>();
 
     }
 
@@ -124,7 +126,11 @@ public class Server extends Application {
 
     private void runServer() { //main server method
         Server server = new Server();
-        server.files = server.getListOfFiles(); //get list of files in videos folder
+        server.videoFiles = server.getListOfVideoFiles(); //get list of files in videos folder
+
+        if(server.videoFiles != null){
+            controller.addText("Videos found: " + server.videoFiles.size() + " of " + server.filesCounter + " files in total");
+        }
 
 //        //print files in folder
 //        System.out.println("List of available files in folder:"); //print files in folder
@@ -132,13 +138,15 @@ public class Server extends Application {
 //            System.out.println(file.getName() + " " + file.getAbsolutePath());
 //        }
 
-        try {
-            //create remaining videos (formats: mkv, mp4, avi & resolutions < original) & store them in Table
-            server.createRemainingVideos();
-            server.storeAvailableFiles();
-            server.latch.await(); //wait the data to be stored
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+        if(server.videoFiles != null){
+            try {
+                //create remaining videos (formats: mkv, mp4, avi & resolutions < original) & store them in Table
+                server.createRemainingVideos();
+                server.storeAvailableFiles();
+                server.latch.await(); //wait the data to be stored
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         try {
@@ -171,8 +179,8 @@ public class Server extends Application {
                     format = (String) arguments[0];
                     downloadSpeed = (int) arguments[1];
 
-                    controller.addText("Received: format: " + format + ", Download speed: " + downloadSpeed + " Kbps");
-                    log.debug("Received: format: " + format + ", Download speed: " + downloadSpeed + " Kbps");
+                    controller.addText("Received: Format: " + format + ", Download Speed: " + downloadSpeed + " Kbps");
+                    log.debug("Received: Format: " + format + ", Download Speed: " + downloadSpeed + " Kbps");
 //                            System.out.println("format: " + format + " downloadSpeed: " + downloadSpeed);
 
                     ArrayList<String> videos = new ArrayList<>(); //list of video's available for streaming
@@ -194,7 +202,7 @@ public class Server extends Application {
                                 selectedVideo = (String) arguments[0];
                                 protocol = (String) arguments[1]; //protocol can be null
 
-                                log.info("Requested Video Info: " + " Name: " + selectedVideo + ", Format: " + format + ", Protocol: " + protocol);
+                                log.debug("Requested Video Info: " + " Name: " + selectedVideo + ", Format: " + format + ", Protocol: " + protocol);
                                 controller.addText("Requested Video Info: " + " Name: " + selectedVideo + ", Format: " + format + ", Protocol: " + protocol);
 
                                 //get path & resolution of the selected video
@@ -211,8 +219,10 @@ public class Server extends Application {
                                     log.debug("Selected Video's Path: " + path + ", Resolution: " + resolution);
                                     //4th stream video
                                     server.streamVideo(protocol, path, resolution); //stream video to client
-                                } else
+                                } else {
                                     log.error("Video not found !");
+                                    controller.addText("Video not found !");
+                                }
 
                             } else {
                                 //if the arguments are format & speed, initialize variables and break the loop
@@ -223,9 +233,7 @@ public class Server extends Application {
                             }
 
                         }
-                    } else { //if there are no videos in folder
-                        //send a null object
-//                        Object noVideosObj = null;
+                    } else { //if there are no videos in folder, send null
                         server.outputStream.writeObject(null);
                         server.outputStream.flush();
                     }
@@ -254,29 +262,39 @@ public class Server extends Application {
 
     }
 
-    private File[] getListOfFiles() {
+    private ArrayList<File> getListOfVideoFiles() {
         videosFolder = new File(videosFolderPath);
-        files = videosFolder.listFiles();
+        File[] files = videosFolder.listFiles();
+        filesCounter = files.length;
+        for(File file : files){
+            //add only supported videos to array list (mkv, mp4, avi)
+            if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
+                videoFiles.add(file);
+            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
+                videoFiles.add(file);
+            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
+                videoFiles.add(file);
+        }
+
         if (files == null) {
-//            System.out.println("FAILED: Folder not found !");
             log.error("FAILED: Folder not found !");
             controller.addText("FAILED: Folder not found !");
-        } else if (files.length == 0) {
+        }
+        if (videoFiles.size() == 0) {
             noVideos = true;
-//            System.out.println("FAILED: No videos found in folder !");
             log.error("No videos found in folder !");
             controller.addText("No videos found in folder !");
-        } else {
+        } else { //if there are videos
             noVideos = false;
-            return files;
+            return videoFiles;
         }
-        return new File[0];
+        return null;
     }
 
     private void createRemainingVideos() throws IOException {
         controller.addText("Creating videos...");
         //create videos in order each one to exist in avi, mkv, mp4 and in all resolutions smaller than the original
-        for (File file : files) {
+        for (File file : videoFiles) {
             //initialize local variables filePath, fileName, fileExtension for each file
             filePath = file.getAbsolutePath();
             fileName = FilenameUtils.getBaseName(filePath);
@@ -321,7 +339,7 @@ public class Server extends Application {
         int targetWidth = getTargetWidth(targetHeight); //get matching width for the specific height
         //create the output file
 //        System.out.println("Creating file: " + file.getAbsolutePath());
-        log.info("Creating file: " + file.getAbsolutePath());
+        log.debug("Creating file: " + file.getAbsolutePath());
         //create new video
         FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath)
@@ -336,11 +354,11 @@ public class Server extends Application {
     }
 
     private void storeAvailableFiles() throws IOException {
-        files = videosFolder.listFiles(); //refresh list (needed in order to add the new ones)
+        refreshVideoFileList(); //refresh list (needed in order to add the new ones)
         //table structure: name (rowKey), format (columnKey), resolution (value)
         if (!noVideos) { //if there are videos
             availableFiles = HashBasedTable.create();
-            for (File file : files) {
+            for (File file : videoFiles) {
                 //initialize local variables filePath, fileName, fileExtension for each file
                 filePath = file.getAbsolutePath();
                 fileName = FilenameUtils.getBaseName(filePath);
@@ -356,12 +374,26 @@ public class Server extends Application {
         latch.countDown(); //notify main thread that the data has been stored
     }
 
+    private void refreshVideoFileList() {
+        File[] files = videosFolder.listFiles(); //refresh list
+        videoFiles.clear();
+        for(File file : files){
+            //add only supported videos to array list
+            if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mkv"))
+                videoFiles.add(file);
+            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("mp4"))
+                videoFiles.add(file);
+            else if(FilenameUtils.getExtension(file.getAbsolutePath()).equals("avi"))
+                videoFiles.add(file);
+        }
+    }
+
     private void establishSocketConnection() {
         try {
             comSocket = serverSocket.accept(); //accept client & create socket for the communication
             ipClient = String.valueOf(comSocket.getInetAddress());
             portClient = comSocket.getPort();
-            log.info("Connected to client at " + ipClient + ":" + portClient);
+            log.debug("Connected to client at " + ipClient + ":" + portClient);
             controller.addText("Connected to client at " + ipClient + ":" + portClient);
 
             outputStream = new ObjectOutputStream(comSocket.getOutputStream()); //object(s) sent to client
@@ -421,8 +453,8 @@ public class Server extends Application {
     }
 
     private boolean fileExists(String selectedVideo) {
-        files = videosFolder.listFiles(); //refresh list
-        for (File file : files) {
+        refreshVideoFileList();
+        for (File file : videoFiles) {
             //initialize local variables filePath, fileName, fileExtension for each file
             filePath = file.getAbsolutePath();
             fileName = FilenameUtils.getBaseName(filePath);
@@ -503,9 +535,7 @@ public class Server extends Application {
                     }
                 }).start();
 
-
             }
-
         }
     }
 

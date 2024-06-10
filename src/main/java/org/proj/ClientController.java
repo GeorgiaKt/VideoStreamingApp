@@ -111,7 +111,6 @@ public class ClientController implements Initializable {
             label.setText("");
             client.sendFormatAndSpeed(formatSelected); //send to server download speed & format
 
-
             loadListView();
             if (!noVideos) { //change label text based on noVideos flag
                 label.setText("Select video to play and protocol (optional)");
