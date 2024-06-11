@@ -192,7 +192,7 @@ public class Server extends Application {
                                 }
 
                                 //4th send code for video found or not
-                                if (path != null && fileExists(selectedVideo)) {
+                                if (path != null && fileExists(selectedVideo, format)) {
                                     //code 1 for video found
                                     server.outputStream.writeObject(1);
                                     server.outputStream.flush();
@@ -449,7 +449,7 @@ public class Server extends Application {
         return 0;
     }
 
-    private boolean fileExists(String selectedVideo) {
+    private boolean fileExists(String selectedVideo, String format) {
         refreshVideoFileList();
         for (File file : videoFiles) {
             //initialize local variables filePath, fileName, fileExtension for each file
@@ -457,7 +457,7 @@ public class Server extends Application {
             fileName = FilenameUtils.getBaseName(filePath);
             fileExtension = FilenameUtils.getExtension(filePath);
 
-            if (fileName.equals(selectedVideo))
+            if (fileName.equals(selectedVideo) && fileExtension.equals(format)) //if name & file extension is the same with the selected then video exists
                 return true;
         }
         return false;
