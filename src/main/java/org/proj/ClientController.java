@@ -8,9 +8,13 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+import javafx.stage.Stage;
 import org.apache.logging.log4j.Logger;
 
 import java.net.URL;
@@ -18,6 +22,8 @@ import java.util.ArrayList;
 import java.util.ResourceBundle;
 
 public class ClientController implements Initializable {
+    @FXML
+    private MenuItem aboutMenuItem;
     @FXML
     private VBox VBoxRight;
 
@@ -150,4 +156,30 @@ public class ClientController implements Initializable {
         Platform.runLater(() -> btn.setDisable(false)); //needs to be run on the ui-modifying thread
     }
 
+    public void aboutMenuItemSelect(ActionEvent actionEvent) {
+        Stage aboutStage = new Stage();
+        aboutStage.setTitle("About");
+        Label builtLabel = new Label(
+                """
+                        Built with:
+                        · JDK 20.0.1
+                        · JavaFX 22.0.1
+                        · FFMPEG 7.0.
+                        · FFMPEG Wrapper for Java 0.8.0
+                        · JSpeedTest 1.32.1
+                        · Scene Builder 21.0.0
+                        · Log4j2 2.13.1
+                        · Guava 32.1.3""");
+        Label devLabel = new Label("Application Developed by: GeorgiaKt");
+        StackPane stackPane =  new StackPane();
+        stackPane.setAlignment(Pos.CENTER);
+        stackPane.getChildren().addAll(builtLabel, devLabel);
+        StackPane.setAlignment(builtLabel, Pos.CENTER);
+        StackPane.setAlignment(devLabel, Pos.BOTTOM_CENTER);
+
+        Scene aboutScene = new Scene(stackPane, 550, 400);
+        aboutStage.setScene(aboutScene);
+        aboutStage.show();
+
+    }
 }
