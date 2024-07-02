@@ -23,6 +23,8 @@ import java.util.ResourceBundle;
 
 public class ClientController implements Initializable {
     @FXML
+    public Label speedTestLabel;
+    @FXML
     private MenuItem aboutMenuItem;
     @FXML
     private VBox VBoxRight;
@@ -51,6 +53,7 @@ public class ClientController implements Initializable {
     private String protocolSelected;
     private int resolution = 0;
     private boolean noVideos;
+    private int downloadSpeed;
 
     public void setClient(Client client, Logger log) {
         this.client = client;
@@ -154,6 +157,11 @@ public class ClientController implements Initializable {
 
     public void enableBtn() { //enable button when speed test is completed
         Platform.runLater(() -> btn.setDisable(false)); //needs to be run on the ui-modifying thread
+    }
+
+    public void updateSpeedLabel(int speed){
+        downloadSpeed = speed;
+        Platform.runLater(() -> speedTestLabel.setText("Download Speed:\n" + downloadSpeed + " Kbps"));
     }
 
     public void aboutMenuItemSelect(ActionEvent actionEvent) {

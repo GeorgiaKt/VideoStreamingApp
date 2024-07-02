@@ -30,6 +30,7 @@
                             </VBox.margin>
                         </ComboBox>
                         <ComboBox fx:id="protocolComboBox" onAction="#protocolSelect" prefWidth="150.0" promptText="protocol" />
+                  <Label fx:id="speedTestLabel" alignment="BOTTOM_CENTER" contentDisplay="CENTER" prefHeight="120.0" prefWidth="148.0" textAlignment="CENTER" />
                     </children>
                     <padding>
                         <Insets top="30.0" />

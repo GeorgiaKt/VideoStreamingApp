@@ -102,6 +102,7 @@ public class Client extends Application {
                 log.info("Speed Test Completed");
                 log.debug("Download Speed: " + downloadSpeed + " Kbps");
                 controller.enableBtn();
+                controller.updateSpeedLabel(downloadSpeed);
             }
 
             @Override
