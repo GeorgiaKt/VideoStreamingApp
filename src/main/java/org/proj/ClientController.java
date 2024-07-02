@@ -185,7 +185,7 @@ public class ClientController implements Initializable {
         StackPane.setAlignment(builtLabel, Pos.CENTER);
         StackPane.setAlignment(devLabel, Pos.BOTTOM_CENTER);
 
-        Scene aboutScene = new Scene(stackPane, 550, 400);
+        Scene aboutScene = new Scene(stackPane, 400, 350);
         aboutStage.setScene(aboutScene);
         aboutStage.show();
 
