@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 public class Client extends Application {
@@ -30,6 +31,7 @@ public class Client extends Application {
     private String selectedFormat;
     private String ffplayPath = "/ffmpeg-7.0-full_build/bin/ffplay.exe";
     private Process videoProcess;
+    private boolean serverDisconnected = false;
 
     public static void main(String[] args) {
         launch(); //launch gui
@@ -64,12 +66,6 @@ public class Client extends Application {
         stage.show();
 
         new Thread(this::runClient).start();
-
-    }
-
-    private void runClient() {
-        //run on a different thread
-        downloadSpeedTest();
     }
 
     private boolean establishSocketConnection() {
@@ -87,6 +83,11 @@ public class Client extends Application {
             System.out.println(e.getMessage());
             return false;
         }
+    }
+
+    private void runClient() {
+        //run on a different thread
+        downloadSpeedTest();
     }
 
     private void downloadSpeedTest() {
@@ -125,17 +126,25 @@ public class Client extends Application {
 
     private void closeConnection() {
         log.info("Closing connection...");
-        try {
-            if (comSocket != null && comSocket.isClosed())
-                comSocket.close();
-            if (outputStream != null)
-                outputStream.close();
-            if (inputStream != null)
-                inputStream.close();
+        if (!serverDisconnected) { //close connection only when server is still running
+            try {
+                if (comSocket != null && comSocket.isClosed())
+                    comSocket.close();
+                if (outputStream != null)
+                    outputStream.close();
+                if (inputStream != null)
+                    inputStream.close();
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+    }
+
+    private void handleServerDisconnection(IOException e) {
+        log.error("Server connection lost: " + e.getMessage());
+        controller.serverClosed();
+        serverDisconnected = true;
     }
 
     //methods for exchange information between server & client
@@ -151,26 +160,29 @@ public class Client extends Application {
         try {
             outputStream.writeObject(speedFormat);
             outputStream.flush();
+        } catch (SocketException e) {
+            handleServerDisconnection(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public ArrayList<String> receiveSuitableVideos() {
-        ArrayList<String> videos;
+        ArrayList<String> videos = null;
         Object sVideos;
         try {
             sVideos = inputStream.readObject();
+            videos = (ArrayList<String>) sVideos;
+            if (videos != null) { //videos can also be null
+                for (int i = 0; i < videos.size(); i++)
+                    videos.set(i, videos.get(i) + "." + selectedFormat);
+            } //add at the end of every video name, the format
+            log.debug("Received: available videos for streaming: " + videos);
+        } catch (SocketException e) {
+            handleServerDisconnection(e);
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
-
-        videos = (ArrayList<String>) sVideos;
-        if (videos != null) { //videos can also be null
-            for (int i = 0; i < videos.size(); i++)
-                videos.set(i, videos.get(i) + "." + selectedFormat);
-        } //add at the end of every video name, the format
-        log.debug("Received: available videos for streaming: " + videos);
         return videos;
     }
 
@@ -183,15 +195,19 @@ public class Client extends Application {
         try {
             outputStream.writeObject(videoProtocol);
             outputStream.flush();
+        } catch (SocketException e) {
+            handleServerDisconnection(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public int receiveVideoResolution() {
-        Object res;
+        Object res = null;
         try {
             res = inputStream.readObject();
+        } catch (SocketException e) {
+            handleServerDisconnection(e);
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -203,13 +219,19 @@ public class Client extends Application {
     }
 
     public boolean receiveIsVideoFound() {
-        Object res;
+        Object res = null;
         try {
             res = inputStream.readObject();
+        } catch (SocketException e) {
+            handleServerDisconnection(e);
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
+        if (res == null){
+            log.debug("Received: code: " + res + " (video not found)");
+            return false;
+        }
         if ((int) res == 0) {
             log.debug("Received: code: " + res + " (video not found)");
             return false;

@@ -164,6 +164,14 @@ public class ClientController implements Initializable {
         Platform.runLater(() -> speedTestLabel.setText("Download Speed:\n" + downloadSpeed + " Kbps"));
     }
 
+    public void serverClosed(){
+        Platform.runLater(() -> {
+            label.setText("Server connection lost !\n Please ensure server is running.\nClose window and try again.");
+            btn.setDisable(true);
+            listView.getItems().clear();
+        });
+    }
+
     public void aboutMenuItemSelect(ActionEvent actionEvent) {
         Stage aboutStage = new Stage();
         aboutStage.setTitle("About");
