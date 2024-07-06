@@ -57,7 +57,7 @@ public class ClientController implements Initializable {
 
     public void setClient(Client client, Logger log) {
         this.client = client;
-        this.log = log;
+        this.log = client.getLogger();
     }
 
     @Override

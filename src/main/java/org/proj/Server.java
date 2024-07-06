@@ -29,7 +29,7 @@ import java.util.concurrent.CountDownLatch;
 
 
 public class Server extends Application {
-    static Logger log = LogManager.getLogger(Server.class);
+    private static Logger log = LogManager.getLogger(Server.class);
     private static ServerController controller; //static in order not to be collected by the garbage collector :(
     private static File videosFolder;
     private final CountDownLatch latch = new CountDownLatch(1); //used for synchronization - wait for data to be stored in a Table

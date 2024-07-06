@@ -20,7 +20,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 
 public class Client extends Application {
-    static Logger log = LogManager.getLogger(Server.class);
+    private static Logger log = LogManager.getLogger(Client.class);
     private static ClientController controller;
     private final String host = "127.0.0.1";
     private final int port = 8888;
@@ -32,6 +32,10 @@ public class Client extends Application {
     private String ffplayPath = "/ffmpeg-7.0-full_build/bin/ffplay.exe";
     private Process videoProcess;
     private boolean serverDisconnected = false;
+
+    public Logger getLogger(){
+        return log;
+    }
 
     public static void main(String[] args) {
         launch(); //launch gui
