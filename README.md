@@ -1,6 +1,7 @@
 # MultimediaApp
-A server-client application for video streaming, built with Java, JavaFX, and FFmpeg.
+A server-client application for video streaming, built with Java, JavaFX, FFmpeg and Sockets.
 ## Description
+This application is a server-client system developed using Java, JavaFX, FFmpeg and Sockets. The communication between the server and the client is achieved via sockets. The server is responsible for processing and generating videos in all supported formats and resolutions, as well as streaming them to the client. The videos used for these matters are retrieved from the videos folder. On the client side, the application interacts with the user, accepting inputs such as the desired video format and protocol. Based on these inputs and the client's calculated download speed, the client receives from the server a list of available for streaming videos and displays it, awaiting the user's selection. Once a video is selected, it is downloaded and streamed to the client.
 
 ### To be noted:
 - All videos must be placed in videos folder.
@@ -9,7 +10,7 @@ A server-client application for video streaming, built with Java, JavaFX, and FF
     - formats: avi, mp4, mkv
     - resolutions: 240p, 360p, 480p, 720p, 1080p
     - protocols: TCP, UDP, RTP/UDP
-- The available for streaming videos depend on the client's download speed, as well as the resolution of the selected video. The maximum video bitrate per resolution is used, based on the Youtube resolutions and bitrates table that follows.
+- The available for streaming videos depend on the client's download speed. The maximum video bitrate per resolution is used, based on the Youtube resolutions and bitrates table that follows.
   | Resolution | 240p  | 360p  | 480p  | 720p  | 1080p  |
   |------------|-------|-------|-------|-------|--------|
   | Maximum Video Bitrate | 700 Kbps | 1000 Kbps | 2000 Kbps | 4000 Kbps | 6000 Kbps |
@@ -23,6 +24,9 @@ A server-client application for video streaming, built with Java, JavaFX, and FF
   |  360p, 480p  |    UDP     |
   | 720p, 1080p  |   RTP/UDP  |
 
+</br>
+
+Videos provided by [standaloneinstaller](https://standaloneinstaller.com/blog/big-list-of-sample-videos-for-testers-124.html)
 
 ## Built with:
 - JDK 20.0.1
