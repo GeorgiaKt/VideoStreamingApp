@@ -24,9 +24,14 @@ This application is a server-client system developed using Java, JavaFX, FFmpeg 
   |  360p, 480p  |    UDP     |
   | 720p, 1080p  |   RTP/UDP  |
 
-</br>
+## Screenshot
+![](https://github.com/GeorgiaKt/MultimediaApp/blob/main/screenshots/client.png)
 
-Videos provided by [standaloneinstaller](https://standaloneinstaller.com/blog/big-list-of-sample-videos-for-testers-124.html)
+More screenshots can be found in [screenshots](https://github.com/GeorgiaKt/MultimediaApp/tree/main/screenshots) folder.
+
+<br />
+
+Videos provided by [standaloneinstaller](https://standaloneinstaller.com/blog/big-list-of-sample-videos-for-testers-124.html).
 
 ## Built with:
 - JDK 20.0.1
