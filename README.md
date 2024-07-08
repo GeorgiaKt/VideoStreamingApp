@@ -31,7 +31,7 @@ More screenshots can be found in [screenshots](https://github.com/GeorgiaKt/Mult
 
 <br />
 
-Videos provided by [standaloneinstaller](https://standaloneinstaller.com/blog/big-list-of-sample-videos-for-testers-124.html).
+Sample video provided by [standaloneinstaller](https://standaloneinstaller.com/blog/big-list-of-sample-videos-for-testers-124.html).
 
 ## Built with:
 - JDK 20.0.1
