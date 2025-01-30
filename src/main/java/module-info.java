@@ -1,4 +1,4 @@
-module MultimediaApp {
+module VideoStreamingApp {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.graphics;
