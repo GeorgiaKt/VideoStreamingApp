@@ -1,5 +1,5 @@
 # VideoStreamingApp
-A Server-Client application for video streaming, built with Java, JavaFX, FFmpeg and Sockets.
+Server-Client application for video streaming, built with Java, JavaFX, FFmpeg and Sockets.
 ## Description
 This application is a server-client system developed using Java, JavaFX, FFmpeg and Sockets. The communication between the server and the client is achieved via sockets. The server is responsible for processing and generating videos in all supported formats and resolutions, as well as streaming them to the client. The videos used for these matters are retrieved from the [videos](https://github.com/GeorgiaKt/MultimediaApp/tree/main/src/main/resources/videos) folder. On the client side, the application interacts with the user, accepting inputs such as the desired video format and protocol. Based on these inputs and the client's calculated download speed, the client receives from the server a list of available for streaming videos and displays it, awaiting the user's selection. Once a video is selected, it is downloaded and streamed to the client.
 
